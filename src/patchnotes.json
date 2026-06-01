@@ -180,5 +180,11 @@
     "Fix for hotkeys after PC awaken from sleep",
     "Fix for search in games tab",
     "Unexpected exceptions are properly logged"
+  ],
+  "249": [
+    "Live mission timeline overlay with countdowns for attack waves and objectives",
+    "Per-difficulty timeline data with an editor on the Mission Overlay tab",
+    "Auto-detect co-op difficulty from the game, with manual override",
+    "Redesigned overlay appearance settings with improved dark-theme readability"
   ]
 }

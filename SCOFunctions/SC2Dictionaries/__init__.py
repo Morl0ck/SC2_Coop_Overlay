@@ -8,6 +8,14 @@ import os as _os
 
 from ._data_utils import (csv_to_dictitems as _csv_to_dictitems, txt_to_iter as _txt_to_iter, csv_to_comastery_dict as _csv_to_comastery_dict,
                           get_file_path)
+from .MissionTimelines import (
+    mission_timelines,
+    mission_timelines_defaults,
+    MISSION_TIMELINE_VERSION,
+    MISSION_TIMELINE_SOURCE,
+    MISSION_TIMELINE_SOURCE_DATE,
+    DIFFICULTIES,
+)
 
 _DATADIR = 'SCOFunctions/SC2Dictionaries'
 _joinDATA = _functools.partial(get_file_path, subfolder=_DATADIR)

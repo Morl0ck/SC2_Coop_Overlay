@@ -17,6 +17,7 @@ core functinality, and similar issues. It's a great learning experience neverthe
 
 """
 import importlib
+import copy
 import json
 import os
 import platform
@@ -47,12 +48,14 @@ from SCOFunctions.MLogging import Logger, catch_exceptions
 from SCOFunctions.MSystemInfo import SystemInfo
 from SCOFunctions.MTheming import MColors, set_dark_theme
 from SCOFunctions.MTwitchBot import TwitchBot
+from SCOFunctions.MissionTimelineStore import MTS, empty_mission_data, mmss_to_seconds, seconds_to_mmss
+from SCOFunctions.SC2Dictionaries import MISSION_TIMELINE_VERSION, DIFFICULTIES
 from SCOFunctions.Settings import Setting_manager as SM
 
 logger = Logger('SCO', Logger.levels.INFO)
 Logger.file_path = truePath("Logs.txt")
 
-APPVERSION = 248
+APPVERSION = 249
 
 
 def excepthook(exc_type: Type[BaseException], exc_value: Exception, exc_tback: TracebackType):
@@ -112,6 +115,7 @@ class UI_TabWidget(object):
         self.signal_manager = Signal_Manager()
         self.signal_manager.showHidePerfOverlay.connect(self.show_hide_performance_overlay)
         self.write_permissions = True
+        self.mission_overlay_preview = False
 
         # Tabs
         self.TAB_Main = Tabs.MainTab(self, APPVERSION)
@@ -123,6 +127,7 @@ class UI_TabWidget(object):
         self.TAB_Resources = Tabs.ResourceTab(self)
         self.TAB_Links = Tabs.LinkTab(self)
         self.TAB_Mutations = Tabs.MutationTab(TabWidget)
+        self.TAB_Mission = Tabs.MissionTab(self)
 
         # Add tabs to the widget
         TabWidget.addTab(self.TAB_Main, "Settings")
@@ -133,6 +138,7 @@ class UI_TabWidget(object):
         TabWidget.addTab(self.TAB_Randomizer, "Randomizer")
         TabWidget.addTab(self.TAB_TwitchBot, "Twitch")
         TabWidget.addTab(self.TAB_Resources, "Performance")
+        TabWidget.addTab(self.TAB_Mission, "Mission Overlay")
         TabWidget.addTab(self.TAB_Links, "Links")
 
         QtCore.QMetaObject.connectSlotsByName(TabWidget)
@@ -149,6 +155,7 @@ class UI_TabWidget(object):
         self.downloading = False
 
         SM.load_settings(truePath('Settings.json'))
+        MTS.load(truePath('MissionTimelines.json'))
 
         # Check for multiple instances
         if SM.settings['check_for_multiple_instances'] and AF.isWindows():
@@ -354,6 +361,28 @@ class UI_TabWidget(object):
         self.TAB_Main.CH_StartMinimized.setChecked(SM.settings['start_minimized'])
         self.TAB_Main.CH_EnableLogging.setChecked(SM.settings['enable_logging'])
         self.TAB_Main.CH_ShowPlayerWinrates.setChecked(SM.settings['show_player_winrates'])
+        self.TAB_Main.CH_ShowMissionTimeline.setChecked(SM.settings['show_mission_timeline'])
+
+        mo = SM.settings['mission_overlay']
+        self.TAB_Mission.CB_AnchorH.setCurrentText('Right' if mo['anchor_h'] == 'right' else 'Left')
+        self.TAB_Mission.CB_AnchorV.setCurrentText('Top' if mo['anchor_v'] == 'top' else 'Bottom')
+        self.TAB_Mission.SP_OffsetX.setValue(mo['offset_x'])
+        self.TAB_Mission.SP_OffsetY.setValue(mo['offset_y'])
+        self.TAB_Mission.SP_Opacity.setValue(mo['opacity'])
+        self.TAB_Mission.SP_BackgroundOpacity.setValue(mo.get('background_opacity', 0.4))
+        self.TAB_Mission.SP_PanelWidth.setValue(mo.get('panel_width', 22.0))
+        self.TAB_Mission.CH_ShowPrevious.setChecked(mo['show_previous'])
+        self.TAB_Mission.CH_ShowUpcoming.setChecked(mo.get('show_upcoming', mo.get('show_next', True)))
+        self.TAB_Mission.SP_FontNext.setValue(mo['font_next'])
+        self.TAB_Mission.SP_FontOther.setValue(mo['font_other'])
+        self.TAB_Mission.CH_FullWidth.setChecked(SM.settings['width'] >= 0.999)
+        diff = mo.get('difficulty', 'auto')
+        self.TAB_Mission.CB_OverlayDifficulty.blockSignals(True)
+        diff_idx = self.TAB_Mission.CB_OverlayDifficulty.findText('Auto' if diff == 'auto' else diff)
+        if diff_idx >= 0:
+            self.TAB_Mission.CB_OverlayDifficulty.setCurrentIndex(diff_idx)
+        self.TAB_Mission.CB_OverlayDifficulty.blockSignals(False)
+        self.populate_mission_timeline_editor()
         self.TAB_Main.CH_ForceHideOverlay.setChecked(SM.settings['force_hide_overlay'])
         # self.TAB_Main.CH_ShowCharts.setChecked(SM.settings['show_charts'])
         self.TAB_Main.CH_DarkTheme.setChecked(SM.settings['dark_theme'])
@@ -417,6 +446,14 @@ class UI_TabWidget(object):
         SM.settings['start_minimized'] = self.TAB_Main.CH_StartMinimized.isChecked()
         SM.settings['enable_logging'] = self.TAB_Main.CH_EnableLogging.isChecked()
         SM.settings['show_player_winrates'] = self.TAB_Main.CH_ShowPlayerWinrates.isChecked()
+        SM.settings['show_mission_timeline'] = self.TAB_Main.CH_ShowMissionTimeline.isChecked()
+
+        # Assign a fresh dict (not in-place mutation) so the shallow-copied
+        # previous_settings keeps the old values and change detection works.
+        SM.settings['mission_overlay'] = self._mission_overlay_from_ui()
+        # Full-width overlay window (needed for left-side mission panel placement).
+        # 1px short of full to avoid the exclusive-fullscreen black-screen issue.
+        SM.settings['width'] = 1.0 if self.TAB_Mission.CH_FullWidth.isChecked() else 0.7
         SM.settings['force_hide_overlay'] = self.TAB_Main.CH_ForceHideOverlay.isChecked()
         # SM.settings['show_charts'] = self.TAB_Main.CH_ShowCharts.isChecked()
         SM.settings['dark_theme'] = self.TAB_Main.CH_DarkTheme.isChecked()
@@ -514,11 +551,11 @@ class UI_TabWidget(object):
                 self.TAB_Main.CH_StartWithWindows.setChecked(SM.settings['start_with_windows'])
 
         # Resend init message if duration has changed. Colors are handle in color picker.
-        if 'duration' in changed_keys:
+        if 'duration' in changed_keys or 'mission_overlay' in changed_keys:
             MF.resend_init_message()
 
-        # Monitor update
-        if 'monitor' in changed_keys and hasattr(self, 'WebView'):
+        # Monitor / overlay-width update
+        if ('monitor' in changed_keys or 'width' in changed_keys) and hasattr(self, 'WebView'):
             self.set_WebView_size_location(SM.settings['monitor'])
 
         # Update keyboard threads
@@ -944,9 +981,10 @@ class UI_TabWidget(object):
         MF.check_names_handles()
         MF.CAnalysis = self.CAnalysis
 
-        # Show player winrates
-        if SM.settings['show_player_winrates']:
-            thread_check_for_newgame = MUI.Worker(MF.check_for_new_game, progress_callback=True)
+        # Start the shared game-state poller when at least one live-game feature
+        # is enabled (player winrates or mission timeline). One thread, not two.
+        if SM.settings['show_player_winrates'] or SM.settings.get('show_mission_timeline', True):
+            thread_check_for_newgame = MUI.Worker(MF.game_state_poller, progress_callback=True)
             thread_check_for_newgame.signals.progress.connect(self.map_identified)
             self.threadpool.start(thread_check_for_newgame)
 
@@ -1182,6 +1220,254 @@ class UI_TabWidget(object):
         except Exception:
             logger.error(traceback.format_exc())
 
+    def populate_mission_timeline_editor(self):
+        cb = self.TAB_Mission.CB_Mission
+        cb.blockSignals(True)
+        current = cb.currentText()
+        cb.clear()
+        for name in MTS.mission_names():
+            cb.addItem(name)
+        idx = cb.findText(current)
+        if idx >= 0:
+            cb.setCurrentIndex(idx)
+        elif cb.count():
+            cb.setCurrentIndex(0)
+        cb.blockSignals(False)
+        self.load_mission_timeline_table()
+
+    def _populate_timeline_table(self, tw, events):
+        tw.setRowCount(0)
+        for ev in events:
+            row = tw.rowCount()
+            tw.insertRow(row)
+            tw.setItem(row, self.TAB_Mission.COL_LABEL, QtWidgets.QTableWidgetItem(ev.get('label', '')))
+            tw.setItem(row, self.TAB_Mission.COL_TIME, QtWidgets.QTableWidgetItem(seconds_to_mmss(ev.get('time'))))
+            for col, key in (
+                (self.TAB_Mission.COL_TECH, 'tech'),
+                (self.TAB_Mission.COL_STRENGTH, 'strength'),
+                (self.TAB_Mission.COL_SPAWN, 'spawn'),
+                (self.TAB_Mission.COL_PATTERN, 'pattern'),
+            ):
+                val = ev.get(key)
+                tw.setItem(row, col, QtWidgets.QTableWidgetItem('' if val is None else str(val)))
+
+    def load_mission_timeline_table(self):
+        map_name = self.TAB_Mission.CB_Mission.currentText()
+        if not map_name:
+            return
+        difficulty = self.TAB_Mission.CB_Difficulty.currentText()
+        data = MTS.timelines.get(map_name, empty_mission_data())
+        attack_waves = data.get('attack_waves', {})
+        objectives = data.get('objectives', {})
+        if not isinstance(attack_waves, dict):
+            attack_waves = {}
+        if not isinstance(objectives, dict):
+            objectives = {}
+
+        objective_rows = objectives.get(difficulty) or []
+        if not objective_rows and difficulty != 'Brutal':
+            objective_rows = objectives.get('Brutal') or []
+
+        self._populate_timeline_table(
+            self.TAB_Mission.TW_AttackWaves,
+            attack_waves.get(difficulty, []),
+        )
+        self._populate_timeline_table(
+            self.TAB_Mission.TW_Objectives,
+            objective_rows,
+        )
+
+    def _active_timeline_table(self):
+        if self.TAB_Mission.timeline_type_tabs.currentIndex() == 0:
+            return self.TAB_Mission.TW_AttackWaves
+        return self.TAB_Mission.TW_Objectives
+
+    def mission_timeline_add_row(self):
+        tw = self._active_timeline_table()
+        row = tw.rowCount()
+        tw.insertRow(row)
+        default_label = 'Attack wave' if tw is self.TAB_Mission.TW_AttackWaves else 'Objective'
+        tw.setItem(row, self.TAB_Mission.COL_LABEL, QtWidgets.QTableWidgetItem(default_label))
+        tw.setItem(row, self.TAB_Mission.COL_TIME, QtWidgets.QTableWidgetItem('5:00'))
+
+    def mission_timeline_remove_rows(self):
+        tw = self._active_timeline_table()
+        rows = sorted({idx.row() for idx in tw.selectionModel().selectedRows()}, reverse=True)
+        for row in rows:
+            tw.removeRow(row)
+
+    def _read_timeline_table(self, tw, section_label):
+        items = []
+        errors = []
+
+        for row in range(tw.rowCount()):
+            label = (tw.item(row, self.TAB_Mission.COL_LABEL).text() if tw.item(row, self.TAB_Mission.COL_LABEL) else '').strip()
+            if not label:
+                continue
+
+            row_errors = []
+            text = tw.item(row, self.TAB_Mission.COL_TIME).text() if tw.item(row, self.TAB_Mission.COL_TIME) else ''
+            sec = mmss_to_seconds(text)
+            if text.strip() and sec is None:
+                row_errors.append(f'invalid time "{text}" (use M:SS)')
+            if sec is None:
+                row_errors.append('time is required')
+
+            ev = {'label': label, 'time': sec}
+            for col, key in (
+                (self.TAB_Mission.COL_TECH, 'tech'),
+                (self.TAB_Mission.COL_STRENGTH, 'strength'),
+                (self.TAB_Mission.COL_SPAWN, 'spawn'),
+                (self.TAB_Mission.COL_PATTERN, 'pattern'),
+            ):
+                text = (tw.item(row, col).text() if tw.item(row, col) else '').strip()
+                if not text:
+                    continue
+                if key in ('tech', 'strength'):
+                    try:
+                        ev[key] = int(text)
+                    except ValueError:
+                        row_errors.append(f'{key} must be an integer')
+                else:
+                    ev[key] = text
+
+            if row_errors:
+                errors.append(f'{section_label} row {row + 1}: ' + '; '.join(row_errors))
+                continue
+            items.append(ev)
+
+        return items, errors
+
+    def save_mission_timeline_table(self):
+        map_name = self.TAB_Mission.CB_Mission.currentText()
+        if not map_name:
+            return
+        difficulty = self.TAB_Mission.CB_Difficulty.currentText()
+
+        attack_waves, wave_errors = self._read_timeline_table(
+            self.TAB_Mission.TW_AttackWaves, 'Attack waves')
+        objectives, objective_errors = self._read_timeline_table(
+            self.TAB_Mission.TW_Objectives, 'Objectives')
+        errors = wave_errors + objective_errors
+
+        if errors:
+            QtWidgets.QMessageBox.warning(self.TAB_Mission, 'Timeline validation', '\n'.join(errors[:12]))
+            return
+
+        attack_waves.sort(key=lambda e: e['time'])
+        objectives.sort(key=lambda e: e['time'])
+
+        data = copy.deepcopy(MTS.timelines.get(map_name, empty_mission_data()))
+        if not isinstance(data.get('attack_waves'), dict):
+            data['attack_waves'] = empty_mission_data()['attack_waves']
+        if not isinstance(data.get('objectives'), dict):
+            data['objectives'] = empty_mission_data()['objectives']
+        data['attack_waves'][difficulty] = attack_waves
+        data['objectives'][difficulty] = objectives
+        MTS.timelines[map_name] = data
+        MTS.save()
+        self.load_mission_timeline_table()
+        self.sendInfoMessage(f'Timeline saved for {map_name} ({difficulty})', color=MColors.msg_success)
+
+    def reset_mission_timeline_mission(self):
+        map_name = self.TAB_Mission.CB_Mission.currentText()
+        if not map_name:
+            return
+        MTS.reset_mission(map_name)
+        MTS.save()
+        self.load_mission_timeline_table()
+        self.sendInfoMessage(f'Reset timeline for {map_name}', color=MColors.msg_success)
+
+    def reset_mission_timeline_all(self):
+        MTS.reset_all()
+        MTS.save()
+        self.load_mission_timeline_table()
+        self.sendInfoMessage('All mission timelines reset to defaults', color=MColors.msg_success)
+
+    def _end_mission_overlay_preview(self):
+        if not self.mission_overlay_preview:
+            return
+        self.mission_overlay_preview = False
+        self.TAB_Mission.CH_Preview.blockSignals(True)
+        self.TAB_Mission.CH_Preview.setChecked(False)
+        self.TAB_Mission.CH_Preview.setText('Preview overlay')
+        self.TAB_Mission.CH_Preview.blockSignals(False)
+        MF.sendEvent({'missionEndEvent': True})
+
+    def on_mission_overlay_difficulty_changed(self):
+        """Apply overlay difficulty immediately (no Apply click needed)."""
+        if not hasattr(self, 'TAB_Mission'):
+            return
+        text = self.TAB_Mission.CB_OverlayDifficulty.currentText()
+        SM.settings.setdefault('mission_overlay', {})['difficulty'] = 'auto' if text == 'Auto' else text
+
+    def _mission_overlay_from_ui(self) -> dict:
+        return {
+            'anchor_h': 'right' if self.TAB_Mission.CB_AnchorH.currentText() == 'Right' else 'left',
+            'anchor_v': 'top' if self.TAB_Mission.CB_AnchorV.currentText() == 'Top' else 'bottom',
+            'offset_x': self.TAB_Mission.SP_OffsetX.value(),
+            'offset_y': self.TAB_Mission.SP_OffsetY.value(),
+            'opacity': self.TAB_Mission.SP_Opacity.value(),
+            'background_opacity': self.TAB_Mission.SP_BackgroundOpacity.value(),
+            'panel_width': self.TAB_Mission.SP_PanelWidth.value(),
+            'show_previous': self.TAB_Mission.CH_ShowPrevious.isChecked(),
+            'show_upcoming': self.TAB_Mission.CH_ShowUpcoming.isChecked(),
+            'font_next': self.TAB_Mission.SP_FontNext.value(),
+            'font_other': self.TAB_Mission.SP_FontOther.value(),
+            'difficulty': (
+                'auto'
+                if self.TAB_Mission.CB_OverlayDifficulty.currentText() == 'Auto'
+                else self.TAB_Mission.CB_OverlayDifficulty.currentText()
+            ),
+        }
+
+    @staticmethod
+    def _preview_display_time(events: list) -> int:
+        """Pick a clock time with at least one past and one upcoming event for preview."""
+        times = sorted(event['time'] for event in events)
+        if not times:
+            return 200
+        if len(times) == 1:
+            return times[0] + 60
+        return times[0] + max(30, (times[1] - times[0]) // 2)
+
+    def _overlay_timeline_difficulty(self) -> str:
+        diff = SM.settings.get('mission_overlay', {}).get('difficulty', 'auto')
+        if diff == 'auto' or diff not in DIFFICULTIES:
+            return 'Brutal'
+        return diff
+
+    def toggle_mission_overlay_preview(self, checked: bool):
+        if checked:
+            map_name = self.TAB_Mission.CB_Mission.currentText() or 'Void Thrashing'
+            difficulty = self._overlay_timeline_difficulty()
+            timeline = MTS.get_events(map_name, difficulty)
+            if not timeline or not timeline.get('events'):
+                map_name = 'Void Thrashing'
+                timeline = MTS.get_events(map_name, difficulty)
+            if not timeline or not timeline.get('events'):
+                self.TAB_Mission.CH_Preview.blockSignals(True)
+                self.TAB_Mission.CH_Preview.setChecked(False)
+                self.TAB_Mission.CH_Preview.blockSignals(False)
+                self.sendInfoMessage('No timeline events to preview', color=MColors.msg_failure)
+                return
+            self.mission_overlay_preview = True
+            self.TAB_Mission.CH_Preview.setText('Stop preview')
+            timing = timeline.get('timing_difficulty', difficulty)
+            events = timeline['events']
+            MF.sendEvent({
+                'missionStartEvent': True,
+                'map_name': map_name,
+                'difficulty': difficulty,
+                'timing_difficulty': timing,
+                'events': events,
+                'displayTime': self._preview_display_time(events),
+                'mission_overlay': self._mission_overlay_from_ui(),
+                'version': MISSION_TIMELINE_VERSION,
+            })
+        else:
+            self._end_mission_overlay_preview()
+
     def sendInfoMessage(self, message, color=None):
         """ Sends info message. `color` specifies message color"""
         self.TAB_Main.LA_InfoLabel.setText(message)
@@ -1227,6 +1513,7 @@ if __name__ == "__main__":
     exit_event = app.exec_()
     TabWidget.tray_icon.hide()
     ui.stop_full_analysis()
+    ui._end_mission_overlay_preview()
     MF.stop_threads()
     ui.saveSettings()
     logger.info('Exit')

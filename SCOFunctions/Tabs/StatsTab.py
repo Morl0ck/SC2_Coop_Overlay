@@ -7,6 +7,30 @@ logger = Logger('STATS', Logger.levels.INFO)
 
 
 class StatsTab(QtWidgets.QWidget):
+    @staticmethod
+    def _section_title(text):
+        label = QtWidgets.QLabel(text)
+        label.setObjectName('StatsSectionTitle')
+        return label
+
+    @staticmethod
+    def _summary_label(text=''):
+        label = QtWidgets.QLabel(text)
+        label.setObjectName('StatsSummaryLabel')
+        label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        return label
+
+    @staticmethod
+    def _filter_column(title, widgets):
+        column = QtWidgets.QVBoxLayout()
+        column.setSpacing(4)
+        column.setContentsMargins(0, 0, 0, 0)
+        column.addWidget(StatsTab._section_title(title))
+        for widget in widgets:
+            column.addWidget(widget)
+        column.addStretch()
+        return column
+
     def __init__(self, parent):
         super().__init__()
         self.p = parent
@@ -15,208 +39,184 @@ class StatsTab(QtWidgets.QWidget):
         self.stats_mycommander_UI_dict = dict()
         self.stats_allycommander_UI_dict = dict()
 
-        self.FR_Stats = QtWidgets.QFrame(self)
-        self.FR_Stats.setGeometry(QtCore.QRect(10, 0, 964, 151))
+        root = QtWidgets.QVBoxLayout(self)
+        root.setContentsMargins(12, 10, 12, 10)
+        root.setSpacing(10)
 
-        # Difficulty
-        self.CH_DiffCasual = QtWidgets.QCheckBox(self.FR_Stats)
-        self.CH_DiffCasual.setGeometry(QtCore.QRect(10, 20, 70, 17))
+        self.FR_Stats = QtWidgets.QFrame(self)
+        self.FR_Stats.setObjectName('StatsFilterCard')
+        filters = QtWidgets.QVBoxLayout(self.FR_Stats)
+        filters.setContentsMargins(14, 12, 14, 12)
+        filters.setSpacing(10)
+
+        self.CH_DiffCasual = QtWidgets.QCheckBox('Casual')
         self.CH_DiffCasual.setChecked(True)
-        self.CH_DiffCasual.setText("Casual")
         self.CH_DiffCasual.stateChanged.connect(self.generate_stats)
 
-        self.CH_DiffNormal = QtWidgets.QCheckBox(self.FR_Stats)
-        self.CH_DiffNormal.setGeometry(QtCore.QRect(10, 40, 70, 17))
+        self.CH_DiffNormal = QtWidgets.QCheckBox('Normal')
         self.CH_DiffNormal.setChecked(True)
-        self.CH_DiffNormal.setText("Normal")
         self.CH_DiffNormal.stateChanged.connect(self.generate_stats)
 
-        self.CH_DiffHard = QtWidgets.QCheckBox(self.FR_Stats)
-        self.CH_DiffHard.setGeometry(QtCore.QRect(10, 60, 70, 17))
+        self.CH_DiffHard = QtWidgets.QCheckBox('Hard')
         self.CH_DiffHard.setChecked(True)
-        self.CH_DiffHard.setText("Hard")
         self.CH_DiffHard.stateChanged.connect(self.generate_stats)
 
-        self.CH_DiffBrutal = QtWidgets.QCheckBox(self.FR_Stats)
-        self.CH_DiffBrutal.setGeometry(QtCore.QRect(10, 80, 70, 17))
+        self.CH_DiffBrutal = QtWidgets.QCheckBox('Brutal')
         self.CH_DiffBrutal.setChecked(True)
-        self.CH_DiffBrutal.setText("Brutal")
         self.CH_DiffBrutal.stateChanged.connect(self.generate_stats)
 
-        self.CH_DiffBrutalPlus = QtWidgets.QCheckBox(self.FR_Stats)
-        self.CH_DiffBrutalPlus.setGeometry(QtCore.QRect(10, 100, 70, 17))
+        self.CH_DiffBrutalPlus = QtWidgets.QCheckBox('Brutal+')
         self.CH_DiffBrutalPlus.setChecked(True)
-        self.CH_DiffBrutalPlus.setText("Brutal+")
         self.CH_DiffBrutalPlus.stateChanged.connect(self.generate_stats)
 
-        # Region
-        self.CH_Region_NA = QtWidgets.QCheckBox(self.FR_Stats)
-        self.CH_Region_NA.setGeometry(QtCore.QRect(90, 20, 71, 17))
+        self.CH_Region_NA = QtWidgets.QCheckBox('Americas')
         self.CH_Region_NA.setChecked(True)
-        self.CH_Region_NA.setText("Americas")
         self.CH_Region_NA.stateChanged.connect(self.generate_stats)
 
-        self.CH_Region_EU = QtWidgets.QCheckBox(self.FR_Stats)
-        self.CH_Region_EU.setGeometry(QtCore.QRect(90, 40, 71, 17))
+        self.CH_Region_EU = QtWidgets.QCheckBox('Europe')
         self.CH_Region_EU.setChecked(True)
-        self.CH_Region_EU.setText("Europe")
         self.CH_Region_EU.stateChanged.connect(self.generate_stats)
 
-        self.CH_Region_KR = QtWidgets.QCheckBox(self.FR_Stats)
-        self.CH_Region_KR.setGeometry(QtCore.QRect(90, 60, 61, 17))
+        self.CH_Region_KR = QtWidgets.QCheckBox('Asia')
         self.CH_Region_KR.setChecked(True)
-        self.CH_Region_KR.setText("Asia")
         self.CH_Region_KR.stateChanged.connect(self.generate_stats)
 
-        self.CH_Region_CN = QtWidgets.QCheckBox(self.FR_Stats)
-        self.CH_Region_CN.setGeometry(QtCore.QRect(90, 80, 61, 17))
+        self.CH_Region_CN = QtWidgets.QCheckBox('China')
         self.CH_Region_CN.setChecked(True)
-        self.CH_Region_CN.setText("China")
         self.CH_Region_CN.stateChanged.connect(self.generate_stats)
 
-        # Type
-        self.CH_TypeNormal = QtWidgets.QCheckBox(self.FR_Stats)
-        self.CH_TypeNormal.setGeometry(QtCore.QRect(180, 20, 110, 17))
+        self.CH_TypeNormal = QtWidgets.QCheckBox('Normal games')
         self.CH_TypeNormal.setChecked(True)
-        self.CH_TypeNormal.setText("Normal games")
         self.CH_TypeNormal.stateChanged.connect(self.generate_stats)
 
-        self.CH_TypeMutation = QtWidgets.QCheckBox(self.FR_Stats)
-        self.CH_TypeMutation.setGeometry(QtCore.QRect(180, 40, 110, 17))
+        self.CH_TypeMutation = QtWidgets.QCheckBox('Mutations')
         self.CH_TypeMutation.setChecked(True)
-        self.CH_TypeMutation.setText("Mutations")
         self.CH_TypeMutation.stateChanged.connect(self.generate_stats)
 
-        self.CH_AllHistoric = QtWidgets.QCheckBox(self.FR_Stats)
-        self.CH_AllHistoric.setGeometry(QtCore.QRect(290, 20, 180, 17))
-        self.CH_AllHistoric.setChecked(True)
-        self.CH_AllHistoric.setText("Override folder selection")
-        self.CH_AllHistoric.setToolTip("Shows stats from all replays regardless of which folder is selected")
-        self.CH_AllHistoric.stateChanged.connect(self.generate_stats)
-
-        self.CH_DualMain = QtWidgets.QCheckBox(self.FR_Stats)
-        self.CH_DualMain.setGeometry(QtCore.QRect(290, 40, 250, 17))
-        self.CH_DualMain.setChecked(False)
-        self.CH_DualMain.setText("Include multi-box games")
-        self.CH_DualMain.setToolTip("Include games where both players belong to your accounts")
-        self.CH_DualMain.stateChanged.connect(self.generate_stats)
-
-        self.CH_TypeWins = QtWidgets.QCheckBox(self.FR_Stats)
-        self.CH_TypeWins.setGeometry(QtCore.QRect(180, 80, 110, 17))
+        self.CH_TypeWins = QtWidgets.QCheckBox('Wins only')
         self.CH_TypeWins.setChecked(False)
-        self.CH_TypeWins.setText("Wins only")
         self.CH_TypeWins.stateChanged.connect(self.generate_stats)
 
-        # Sub15 and both mains
-        self.CH_Sub15 = QtWidgets.QCheckBox(self.FR_Stats)
-        self.CH_Sub15.setGeometry(QtCore.QRect(290, 60, 150, 17))
+        self.CH_AllHistoric = QtWidgets.QCheckBox('Override folder selection')
+        self.CH_AllHistoric.setChecked(True)
+        self.CH_AllHistoric.setToolTip('Shows stats from all replays regardless of which folder is selected')
+        self.CH_AllHistoric.stateChanged.connect(self.generate_stats)
+
+        self.CH_DualMain = QtWidgets.QCheckBox('Include multi-box games')
+        self.CH_DualMain.setChecked(False)
+        self.CH_DualMain.setToolTip('Include games where both players belong to your accounts')
+        self.CH_DualMain.stateChanged.connect(self.generate_stats)
+
+        self.CH_Sub15 = QtWidgets.QCheckBox('Include levels 1-14')
         self.CH_Sub15.setChecked(True)
-        self.CH_Sub15.setText("Include levels 1-14")
-        self.CH_Sub15.setToolTip("Include games where the main player was level 1-14")
+        self.CH_Sub15.setToolTip('Include games where the main player was level 1-14')
         self.CH_Sub15.stateChanged.connect(self.generate_stats)
 
-        self.CH_Over15 = QtWidgets.QCheckBox(self.FR_Stats)
-        self.CH_Over15.setGeometry(QtCore.QRect(290, 80, 150, 17))
+        self.CH_Over15 = QtWidgets.QCheckBox('Include levels 15+')
         self.CH_Over15.setChecked(True)
-        self.CH_Over15.setText("Include levels 15+")
-        self.CH_Over15.setToolTip("Include games where the main player was level 15+")
+        self.CH_Over15.setToolTip('Include games where the main player was level 15+')
         self.CH_Over15.stateChanged.connect(self.generate_stats)
 
-        # Games found
-        self.LA_GamesFound = QtWidgets.QLabel(self.FR_Stats)
-        self.LA_GamesFound.setEnabled(False)
-        self.LA_GamesFound.setGeometry(QtCore.QRect(570, 110, 381, 20))
-        self.LA_GamesFound.setLayoutDirection(QtCore.Qt.LeftToRight)
-        self.LA_GamesFound.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignTrailing | QtCore.Qt.AlignVCenter)
+        filter_columns = QtWidgets.QHBoxLayout()
+        filter_columns.setSpacing(18)
+        filter_columns.addLayout(self._filter_column('Difficulty', [
+            self.CH_DiffCasual, self.CH_DiffNormal, self.CH_DiffHard, self.CH_DiffBrutal, self.CH_DiffBrutalPlus,
+        ]))
+        filter_columns.addLayout(self._filter_column('Region', [
+            self.CH_Region_NA, self.CH_Region_EU, self.CH_Region_KR, self.CH_Region_CN,
+        ]))
+        filter_columns.addLayout(self._filter_column('Game type', [
+            self.CH_TypeNormal, self.CH_TypeMutation, self.CH_TypeWins,
+        ]))
+        filter_columns.addLayout(self._filter_column('Scope', [
+            self.CH_AllHistoric, self.CH_DualMain,
+        ]))
+        filter_columns.addLayout(self._filter_column('Account level', [
+            self.CH_Sub15, self.CH_Over15,
+        ]))
+        filter_columns.addStretch()
+        filters.addLayout(filter_columns)
 
-        # Main names
-        self.LA_IdentifiedPlayers = QtWidgets.QLabel(self.FR_Stats)
-        self.LA_IdentifiedPlayers.setEnabled(False)
-        self.LA_IdentifiedPlayers.setGeometry(QtCore.QRect(570, 125, 381, 20))
-        self.LA_IdentifiedPlayers.setLayoutDirection(QtCore.Qt.LeftToRight)
-        self.LA_IdentifiedPlayers.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignTrailing | QtCore.Qt.AlignVCenter)
+        constraints_row = QtWidgets.QHBoxLayout()
+        constraints_row.setSpacing(16)
 
-        # Date time frame
-        self.FR_DateTime = QtWidgets.QFrame(self.FR_Stats)
-        self.FR_DateTime.setGeometry(QtCore.QRect(470, 15, 500, 300))
+        self.FR_DateTime = QtWidgets.QWidget(self.FR_Stats)
+        constraints = QtWidgets.QGridLayout(self.FR_DateTime)
+        constraints.setContentsMargins(0, 0, 0, 0)
+        constraints.setHorizontalSpacing(10)
+        constraints.setVerticalSpacing(6)
 
-        # Date
-        self.LA_ReplayDate = QtWidgets.QLabel(self.FR_DateTime)
-        self.LA_ReplayDate.setGeometry(QtCore.QRect(160, 0, 101, 16))
-        self.LA_ReplayDate.setStyleSheet('font-weight: bold')
-        self.LA_ReplayDate.setAlignment(QtCore.Qt.AlignLeading | QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
-        self.LA_ReplayDate.setText("Replay date")
+        self.LA_GameLength = self._section_title('Game length (minutes)')
+        self.LA_ReplayDate = self._section_title('Replay date')
+        constraints.addWidget(self.LA_GameLength, 0, 0, 1, 2)
+        constraints.addWidget(self.LA_ReplayDate, 0, 3, 1, 2)
 
-        self.LA_To = QtWidgets.QLabel(self.FR_DateTime)
-        self.LA_To.setGeometry(QtCore.QRect(280, 52, 31, 16))
-        self.LA_To.setText("To")
-        self.TM_ToDate = QtWidgets.QDateEdit(self.FR_DateTime)
-        self.TM_ToDate.setGeometry(QtCore.QRect(160, 52, 110, 22))
-        self.TM_ToDate.setDateTime(QtCore.QDateTime(QtCore.QDate(2030, 12, 30), QtCore.QTime(0, 0, 0)))
-        self.TM_ToDate.setDisplayFormat("d/M/yyyy")
-        self.TM_ToDate.dateChanged.connect(self.generate_stats)
+        self.SP_MinGamelength = QtWidgets.QSpinBox()
+        self.SP_MinGamelength.setMinimum(0)
+        self.SP_MinGamelength.setMaximum(1000)
+        self.SP_MinGamelength.setProperty('value', 0)
+        self.SP_MinGamelength.valueChanged.connect(self.generate_stats)
+        self.LA_Minimum = QtWidgets.QLabel('Minimum')
+        constraints.addWidget(self.SP_MinGamelength, 1, 0)
+        constraints.addWidget(self.LA_Minimum, 1, 1)
 
-        self.LA_From = QtWidgets.QLabel(self.FR_DateTime)
-        self.LA_From.setGeometry(QtCore.QRect(280, 22, 31, 16))
-        self.LA_From.setText("From")
-        self.TM_FromDate = QtWidgets.QDateEdit(self.FR_DateTime)
-        self.TM_FromDate.setGeometry(QtCore.QRect(160, 22, 110, 22))
+        self.TM_FromDate = QtWidgets.QDateEdit()
         self.TM_FromDate.setDateTime(QtCore.QDateTime(QtCore.QDate(2015, 11, 10), QtCore.QTime(0, 0, 0)))
-        self.TM_FromDate.setDisplayFormat("d/M/yyyy")
+        self.TM_FromDate.setDisplayFormat('d/M/yyyy')
         self.TM_FromDate.dateChanged.connect(self.generate_stats)
+        self.LA_From = QtWidgets.QLabel('From')
+        constraints.addWidget(self.LA_From, 1, 3)
+        constraints.addWidget(self.TM_FromDate, 1, 4)
 
-        # Game length
-        self.LA_GameLength = QtWidgets.QLabel(self.FR_DateTime)
-        self.LA_GameLength.setGeometry(QtCore.QRect(0, 0, 150, 16))
-        self.LA_GameLength.setStyleSheet('font-weight: bold')
-        self.LA_GameLength.setAlignment(QtCore.Qt.AlignLeading | QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
-        self.LA_GameLength.setText("Game length (minutes)")
-
-        self.LA_Maximum = QtWidgets.QLabel(self.FR_DateTime)
-        self.LA_Maximum.setGeometry(QtCore.QRect(50, 52, 60, 16))
-        self.LA_Maximum.setText("Maximum")
-
-        self.LA_Minimum = QtWidgets.QLabel(self.FR_DateTime)
-        self.LA_Minimum.setGeometry(QtCore.QRect(50, 22, 60, 16))
-        self.LA_Minimum.setText("Minimum")
-
-        self.SP_MaxGamelength = QtWidgets.QSpinBox(self.FR_DateTime)
-        self.SP_MaxGamelength.setGeometry(QtCore.QRect(0, 52, 42, 22))
+        self.SP_MaxGamelength = QtWidgets.QSpinBox()
         self.SP_MaxGamelength.setMinimum(0)
         self.SP_MaxGamelength.setMaximum(1000)
-        self.SP_MaxGamelength.setProperty("value", 0)
+        self.SP_MaxGamelength.setProperty('value', 0)
         self.SP_MaxGamelength.valueChanged.connect(self.generate_stats)
+        self.LA_Maximum = QtWidgets.QLabel('Maximum')
+        constraints.addWidget(self.SP_MaxGamelength, 2, 0)
+        constraints.addWidget(self.LA_Maximum, 2, 1)
 
-        self.SP_MinGamelength = QtWidgets.QSpinBox(self.FR_DateTime)
-        self.SP_MinGamelength.setGeometry(QtCore.QRect(0, 22, 42, 22))
-        self.SP_MinGamelength.setMaximum(1000)
-        self.SP_MinGamelength.setProperty("value", 0)
-        self.SP_MinGamelength.valueChanged.connect(self.generate_stats)
+        self.TM_ToDate = QtWidgets.QDateEdit()
+        self.TM_ToDate.setDateTime(QtCore.QDateTime(QtCore.QDate(2030, 12, 30), QtCore.QTime(0, 0, 0)))
+        self.TM_ToDate.setDisplayFormat('d/M/yyyy')
+        self.TM_ToDate.dateChanged.connect(self.generate_stats)
+        self.LA_To = QtWidgets.QLabel('To')
+        constraints.addWidget(self.LA_To, 2, 3)
+        constraints.addWidget(self.TM_ToDate, 2, 4)
 
-        # Player name
-        self.ED_PlayerName = QtWidgets.QLineEdit(self.FR_DateTime)
-        self.ED_PlayerName.setGeometry(QtCore.QRect(330, 52, 150, 20))
+        self.ED_PlayerName = QtWidgets.QLineEdit()
         self.ED_PlayerName.setAlignment(QtCore.Qt.AlignLeft)
-        self.ED_PlayerName.setStyleSheet("font-weight: normal")
-        self.ED_PlayerName.setToolTip("Filter by ally player name.\nYou can use ? and * as wildcards.")
-        self.ED_PlayerName.setPlaceholderText("Filter by ally player name")
+        self.ED_PlayerName.setToolTip('Filter by ally player name.\nYou can use ? and * as wildcards.')
+        self.ED_PlayerName.setPlaceholderText('Filter by ally player name')
         self.ED_PlayerName.textChanged.connect(self.generate_stats)
+        constraints.addWidget(self.ED_PlayerName, 3, 3, 1, 2)
 
-        # Data dump
-        self.BT_FA_dump = QtWidgets.QPushButton(self.FR_Stats)
-        self.BT_FA_dump.setGeometry(QtCore.QRect(850, 10, 100, 25))
-        self.BT_FA_dump.setText('Dump Data')
+        constraints_row.addWidget(self.FR_DateTime, 1)
+
+        summary_col = QtWidgets.QVBoxLayout()
+        summary_col.setSpacing(4)
+        self.LA_GamesFound = self._summary_label()
+        self.LA_IdentifiedPlayers = self._summary_label()
+        self.BT_FA_dump = QtWidgets.QPushButton('Dump Data')
         self.BT_FA_dump.setToolTip('Dumps all replay data to "replay_data_dump.json" file')
         self.BT_FA_dump.setEnabled(False)
+        summary_col.addStretch()
+        summary_col.addWidget(self.LA_GamesFound)
+        summary_col.addWidget(self.LA_IdentifiedPlayers)
+        summary_col.addWidget(self.BT_FA_dump, 0, QtCore.Qt.AlignRight)
+        constraints_row.addLayout(summary_col)
+        filters.addLayout(constraints_row)
+
+        root.addWidget(self.FR_Stats)
 
         ##### RESULTS #####
-        self.TABW_StatResults = QtWidgets.QTabWidget(self)
-        self.TABW_StatResults.setGeometry(QtCore.QRect(5, 126, 971, 459))
+        self.TABW_StatResults = QtWidgets.QTabWidget()
+        self.TABW_StatResults.setObjectName('StatsResultsTabs')
 
         ### TAB Maps
         self.TAB_Maps = QtWidgets.QWidget()
         self.GB_MapsOverview = QtWidgets.QFrame(self.TAB_Maps)
-        self.GB_MapsOverview.setGeometry(QtCore.QRect(8, 8, 470, 420))
         self.WD_Heading = MUI.MapEntry(self.GB_MapsOverview,
                                        0,
                                        'Map name',
@@ -233,13 +233,12 @@ class StatsTab(QtWidgets.QWidget):
         self.QB_FastestMap = MUI.FastestMap(self.TAB_Maps)
 
         self.LA_Stats_Wait = QtWidgets.QLabel(self.TAB_Maps)
-        self.LA_Stats_Wait.setGeometry(QtCore.QRect(0, 0, 470, self.TAB_Maps.height()))
         self.LA_Stats_Wait.setText('<b>Please wait. This can take few minutes the first time.<br>Analyzing your replays.</b>')
         self.LA_Stats_Wait.setAlignment(QtCore.Qt.AlignVCenter | QtCore.Qt.AlignCenter)
 
         ### TAB Difficulty & Regions
         self.TAB_DifficultyRegions = QtWidgets.QWidget()
-        self.LA_Difficulty_header = MUI.DifficultyEntry('Difficuly',
+        self.LA_Difficulty_header = MUI.DifficultyEntry('Difficulty',
                                                         'Wins',
                                                         'Losses',
                                                         'Winrate',
@@ -279,11 +278,8 @@ class StatsTab(QtWidgets.QWidget):
 
         ### TAB Allied Commanders
         self.TAB_AlliedCommanders = QtWidgets.QWidget()
-        self.LA_AlliedCommanders = QtWidgets.QLabel(self.TAB_AlliedCommanders)
-        self.LA_AlliedCommanders.setGeometry(QtCore.QRect(555, 408, 400, 20))
-        self.LA_AlliedCommanders.setText("* Frequency has been corrected for your commander preferences")
-        self.LA_AlliedCommanders.setAlignment(QtCore.Qt.AlignRight)
-        self.LA_AlliedCommanders.setEnabled(False)
+        self.LA_AlliedCommanders = self._summary_label('* Frequency has been corrected for your commander preferences')
+        self.LA_AlliedCommanders.setParent(self.TAB_AlliedCommanders)
 
         self.AlliedCommanderHeading = MUI.CommanderEntry('Allied commander',
                                                          'Freq',
@@ -300,57 +296,82 @@ class StatsTab(QtWidgets.QWidget):
 
         # Full analysis
         self.TAB_FullAnalysis = QtWidgets.QWidget()
+        fa_layout = QtWidgets.QVBoxLayout(self.TAB_FullAnalysis)
+        fa_layout.setContentsMargins(14, 12, 14, 12)
+        fa_layout.setSpacing(10)
 
-        self.CH_FA_description = QtWidgets.QLabel(self.TAB_FullAnalysis)
-        self.CH_FA_description.setGeometry(QtCore.QRect(10, 0, 500, 80))
-        self.CH_FA_description.setText('Run full analysis to get more accurate game lengths and APM, and see additional statistics \
-                                        related to player and unit kills, bonus objectives and other.<br><br><b>Warning! This might \
-                                        take a long time and the PC will be less responsive.</b>')
+        self.CH_FA_description = QtWidgets.QLabel(
+            'Run full analysis to get more accurate game lengths and APM, and see additional statistics '
+            'related to player and unit kills, bonus objectives and other.<br><br>'
+            '<b>Warning! This might take a long time and the PC will be less responsive.</b>')
         self.CH_FA_description.setWordWrap(True)
+        self.CH_FA_description.setObjectName('StatsHintLabel')
+        fa_layout.addWidget(self.CH_FA_description)
 
-        self.BT_FA_run = QtWidgets.QPushButton(self.TAB_FullAnalysis)
-        self.BT_FA_run.setGeometry(QtCore.QRect(10, 85, 80, 25))
-        self.BT_FA_run.setText('Run')
+        fa_buttons = QtWidgets.QHBoxLayout()
+        fa_buttons.setSpacing(8)
+        self.BT_FA_run = QtWidgets.QPushButton('Run')
         self.BT_FA_run.setEnabled(False)
-
-        self.BT_FA_stop = QtWidgets.QPushButton(self.TAB_FullAnalysis)
-        self.BT_FA_stop.setGeometry(QtCore.QRect(105, 85, 80, 25))
+        self.BT_FA_stop = QtWidgets.QPushButton('Pause')
         self.BT_FA_stop.clicked.connect(self.p.stop_full_analysis)
-        self.BT_FA_stop.setText('Pause')
         self.BT_FA_stop.setEnabled(False)
-
-        self.CH_FA_atstart = QtWidgets.QCheckBox(self.TAB_FullAnalysis)
-        self.CH_FA_atstart.setGeometry(QtCore.QRect(11, 115, 300, 25))
-        self.CH_FA_atstart.setText('Continue full analysis at start')
-
-        self.CH_FA_status = QtWidgets.QLabel(self.TAB_FullAnalysis)
-        self.CH_FA_status.setGeometry(QtCore.QRect(10, 140, 400, 40))
-
-        self.BT_FA_redo = QtWidgets.QPushButton(self.TAB_FullAnalysis)
-        self.BT_FA_redo.setGeometry(QtCore.QRect(835, 10, 120, 25))
+        self.BT_FA_redo = QtWidgets.QPushButton('Delete parsed data')
         self.BT_FA_redo.clicked.connect(self.p.redo_full_analysis)
-        self.BT_FA_redo.setText('Delete parsed data')
         self.BT_FA_redo.setToolTip(
-            'WARNING!\nThis will delete all parsed data and start the analysis anew.\nThis might be useful after an update to the parser.')
+            'WARNING!\nThis will delete all parsed data and start the analysis anew.\n'
+            'This might be useful after an update to the parser.')
+        fa_buttons.addWidget(self.BT_FA_run)
+        fa_buttons.addWidget(self.BT_FA_stop)
+        fa_buttons.addStretch()
+        fa_buttons.addWidget(self.BT_FA_redo)
+        fa_layout.addLayout(fa_buttons)
+
+        self.CH_FA_atstart = QtWidgets.QCheckBox('Continue full analysis at start')
+        fa_layout.addWidget(self.CH_FA_atstart)
+
+        self.CH_FA_status = QtWidgets.QLabel()
+        self.CH_FA_status.setObjectName('StatsHintLabel')
+        self.CH_FA_status.setWordWrap(True)
+        fa_layout.addWidget(self.CH_FA_status)
+        fa_layout.addStretch()
 
         # Putting it together
-        self.TABW_StatResults.addTab(self.TAB_Maps, "")
-        self.TABW_StatResults.setTabText(self.TABW_StatResults.indexOf(self.TAB_Maps), "Maps")
+        self.TABW_StatResults.addTab(self.TAB_Maps, 'Maps')
+        self.TABW_StatResults.addTab(self.TAB_AlliedCommanders, 'Allied commanders')
+        self.TABW_StatResults.addTab(self.TAB_MyCommanders, 'My commanders')
+        self.TABW_StatResults.addTab(self.TAB_DifficultyRegions, 'Difficulty and regions')
+        self.TABW_StatResults.addTab(self.TAB_FullAnalysis, 'Full analysis')
 
-        self.TABW_StatResults.addTab(self.TAB_AlliedCommanders, "")
-        self.TABW_StatResults.setTabText(self.TABW_StatResults.indexOf(self.TAB_AlliedCommanders), "Allied commanders")
-
-        self.TABW_StatResults.addTab(self.TAB_MyCommanders, "")
-        self.TABW_StatResults.setTabText(self.TABW_StatResults.indexOf(self.TAB_MyCommanders), "My commanders")
-
-        self.TABW_StatResults.addTab(self.TAB_DifficultyRegions, "")
-        self.TABW_StatResults.setTabText(self.TABW_StatResults.indexOf(self.TAB_DifficultyRegions), "Difficulty and regions")
-
-        self.TABW_StatResults.addTab(self.TAB_FullAnalysis, "")
-        self.TABW_StatResults.setTabText(self.TABW_StatResults.indexOf(self.TAB_FullAnalysis), "Full analysis")
+        root.addWidget(self.TABW_StatResults, 1)
 
         self.TABW_StatResults.setCurrentIndex(0)
         self.TABW_StatResults.currentChanged.connect(self.switched_tab)
+        self.update_results_layout()
+
+    def update_results_layout(self):
+        if self.TAB_Maps.width() <= 0 or self.TAB_Maps.height() <= 0:
+            return
+        margin = 8
+        w = self.TAB_Maps.width()
+        h = self.TAB_Maps.height()
+        list_w = min(470, max((w - margin * 3) // 2, 280))
+        detail_w = max(w - list_w - margin * 3, 280)
+        panel_h = max(h - margin * 2, 200)
+        self.GB_MapsOverview.setGeometry(margin, margin, list_w, panel_h)
+        self.QB_FastestMap.setGeometry(margin + list_w + margin, margin, detail_w, panel_h)
+        if self.LA_Stats_Wait is not None:
+            self.LA_Stats_Wait.setGeometry(margin, margin, list_w, panel_h)
+        if hasattr(self, 'LA_AlliedCommanders'):
+            footnote_w = min(400, self.TAB_AlliedCommanders.width() - 16)
+            self.LA_AlliedCommanders.setGeometry(
+                max(self.TAB_AlliedCommanders.width() - footnote_w - margin, margin),
+                max(self.TAB_AlliedCommanders.height() - 24, 0),
+                footnote_w,
+                20)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self.update_results_layout()
 
     def generate_stats(self):
         """ Generate stats and passes data to be shown"""
@@ -519,6 +540,7 @@ class StatsTab(QtWidgets.QWidget):
     def switched_tab(self, idx):
         """ Updating bg depends whether a unit is visible, this break when switched to another tab.
         This function updates background for Amon's units when you switch to the tab"""
+        self.update_results_layout()
         if idx == 5:
             self.WD_amon_unit_stats.update_backgrounds()
 

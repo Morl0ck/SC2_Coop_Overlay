@@ -1,0 +1,2257 @@
+{
+  "version": "1.3",
+  "timelines": {
+    "Chain of Ascension": {
+      "attack_waves": {
+        "Casual": [],
+        "Normal": [],
+        "Hard": [
+          {
+            "label": "Attack wave",
+            "time": 211
+          },
+          {
+            "label": "Attack wave",
+            "time": 526
+          },
+          {
+            "label": "Attack wave",
+            "time": 866
+          },
+          {
+            "label": "Attack wave",
+            "time": 1080
+          },
+          {
+            "label": "Attack wave",
+            "time": 1289
+          },
+          {
+            "label": "Attack wave",
+            "time": 1516
+          },
+          {
+            "label": "Attack wave",
+            "time": 1711
+          }
+        ],
+        "Brutal": [
+          {
+            "label": "Attack wave",
+            "tech": 2,
+            "strength": 2,
+            "notes": "Single",
+            "time": 210
+          },
+          {
+            "label": "Attack wave",
+            "tech": 5,
+            "strength": 5,
+            "notes": "Single",
+            "time": 420
+          },
+          {
+            "label": "Attack wave",
+            "tech": 4,
+            "strength": 4,
+            "notes": "Single",
+            "time": 660
+          },
+          {
+            "label": "Attack wave",
+            "tech": 5,
+            "strength": 5,
+            "notes": "Single",
+            "time": 840
+          },
+          {
+            "label": "Attack wave",
+            "tech": 4,
+            "strength": 4,
+            "notes": "Double",
+            "time": 1080
+          },
+          {
+            "label": "Attack wave",
+            "tech": 7,
+            "strength": 5,
+            "notes": "Double",
+            "time": 1290
+          },
+          {
+            "label": "Attack wave",
+            "tech": 7,
+            "strength": 6,
+            "notes": "Double",
+            "time": 1530
+          }
+        ]
+      },
+      "objectives": {
+        "Casual": [],
+        "Normal": [],
+        "Hard": [],
+        "Brutal": [
+          {
+            "label": "Hybrid wave 1",
+            "tech": 3,
+            "strength": 3,
+            "time": 540
+          },
+          {
+            "label": "Slayn Elemental 1",
+            "time": 600
+          },
+          {
+            "label": "Hybrid wave 2",
+            "tech": 4,
+            "strength": 4,
+            "time": 900
+          },
+          {
+            "label": "Slayn Elemental 2",
+            "time": 960
+          },
+          {
+            "label": "Hybrid wave 3",
+            "tech": 6,
+            "strength": 6,
+            "time": 1380
+          },
+          {
+            "label": "Hybrid wave 4",
+            "tech": 6,
+            "strength": 6,
+            "time": 1800
+          }
+        ]
+      }
+    },
+    "Cradle of Death": {
+      "attack_waves": {
+        "Casual": [],
+        "Normal": [],
+        "Hard": [
+          {
+            "label": "Attack wave",
+            "time": 361
+          },
+          {
+            "label": "Attack wave",
+            "time": 488
+          },
+          {
+            "label": "Attack wave",
+            "time": 632
+          },
+          {
+            "label": "Attack wave",
+            "time": 901
+          },
+          {
+            "label": "Attack wave",
+            "time": 1033
+          },
+          {
+            "label": "Attack wave",
+            "time": 1260
+          },
+          {
+            "label": "Attack wave",
+            "time": 1501
+          },
+          {
+            "label": "Attack wave",
+            "time": 1701
+          },
+          {
+            "label": "Attack wave",
+            "time": 1981
+          }
+        ],
+        "Brutal": [
+          {
+            "label": "Attack wave",
+            "tech": 1,
+            "strength": 1,
+            "time": 240
+          },
+          {
+            "label": "Attack wave",
+            "tech": 1,
+            "strength": 2,
+            "time": 360
+          },
+          {
+            "label": "Attack wave",
+            "tech": 2,
+            "strength": 2,
+            "time": 540
+          },
+          {
+            "label": "Attack wave",
+            "tech": 3,
+            "strength": 2,
+            "time": 720
+          },
+          {
+            "label": "Attack wave",
+            "tech": 4,
+            "strength": 4,
+            "time": 900
+          },
+          {
+            "label": "Attack wave",
+            "tech": 4,
+            "strength": 4,
+            "time": 1080
+          },
+          {
+            "label": "Attack wave",
+            "tech": 5,
+            "strength": 5,
+            "time": 1260
+          },
+          {
+            "label": "Attack wave",
+            "tech": 6,
+            "strength": 5,
+            "time": 1500
+          },
+          {
+            "label": "Attack wave",
+            "tech": 7,
+            "strength": 6,
+            "time": 1740
+          }
+        ]
+      },
+      "objectives": {
+        "Casual": [],
+        "Normal": [],
+        "Hard": [],
+        "Brutal": []
+      }
+    },
+    "Dead of Night": {
+      "attack_waves": {
+        "Casual": [],
+        "Normal": [],
+        "Hard": [
+          {
+            "label": "Attack wave",
+            "time": 842
+          },
+          {
+            "label": "Attack wave",
+            "time": 1292
+          },
+          {
+            "label": "Attack wave",
+            "time": 1630
+          },
+          {
+            "label": "Attack wave",
+            "time": 1740
+          }
+        ],
+        "Brutal": [
+          {
+            "label": "Attack wave",
+            "time": 390,
+            "tech": 0,
+            "strength": 0,
+            "spawn": "South"
+          },
+          {
+            "label": "Attack wave",
+            "time": 840,
+            "tech": 2,
+            "strength": 2,
+            "spawn": "South + North"
+          },
+          {
+            "label": "Attack wave",
+            "time": 1290,
+            "tech": 3,
+            "strength": 3,
+            "spawn": "All sides"
+          },
+          {
+            "label": "Attack wave",
+            "time": 1740,
+            "tech": 4,
+            "strength": 4,
+            "spawn": "All sides"
+          }
+        ]
+      },
+      "objectives": {
+        "Casual": [],
+        "Normal": [],
+        "Hard": [],
+        "Brutal": [
+          {
+            "label": "Day 1",
+            "time": 0
+          },
+          {
+            "label": "Night 1",
+            "time": 210
+          },
+          {
+            "label": "Day 2",
+            "time": 450
+          },
+          {
+            "label": "Night 2",
+            "time": 660
+          },
+          {
+            "label": "Day 3",
+            "time": 900
+          },
+          {
+            "label": "Night 3",
+            "time": 1110
+          },
+          {
+            "label": "Day 4",
+            "time": 1350
+          },
+          {
+            "label": "Night 4",
+            "time": 1560
+          },
+          {
+            "label": "Day 5",
+            "time": 1800
+          },
+          {
+            "label": "Night 5",
+            "time": 2010
+          }
+        ]
+      }
+    },
+    "Lock & Load": {
+      "attack_waves": {
+        "Casual": [],
+        "Normal": [],
+        "Hard": [
+          {
+            "label": "Attack wave",
+            "time": 245
+          },
+          {
+            "label": "Attack wave",
+            "time": 489
+          },
+          {
+            "label": "Attack wave",
+            "time": 677
+          },
+          {
+            "label": "Attack wave",
+            "time": 1053
+          },
+          {
+            "label": "Attack wave",
+            "time": 1184
+          },
+          {
+            "label": "Attack wave",
+            "time": 1313
+          },
+          {
+            "label": "Attack wave",
+            "time": 1595
+          },
+          {
+            "label": "Attack wave",
+            "time": 1719
+          },
+          {
+            "label": "Attack wave",
+            "time": 1911
+          }
+        ],
+        "Brutal": [
+          {
+            "label": "Attack wave",
+            "tech": 1,
+            "strength": 3,
+            "spawn": "Left",
+            "notes": "Single wave",
+            "time": 240
+          },
+          {
+            "label": "Attack wave",
+            "tech": 2,
+            "strength": 4,
+            "spawn": "Right",
+            "notes": "Single wave",
+            "time": 480
+          },
+          {
+            "label": "Attack wave",
+            "tech": 3,
+            "strength": 5,
+            "notes": "Double wave",
+            "time": 660
+          },
+          {
+            "label": "Attack wave",
+            "tech": 3,
+            "strength": 5,
+            "notes": "Double wave",
+            "time": 840
+          },
+          {
+            "label": "Attack wave",
+            "tech": 4,
+            "strength": 6,
+            "notes": "Double wave",
+            "time": 1020
+          },
+          {
+            "label": "Attack wave",
+            "tech": 5,
+            "strength": 6,
+            "notes": "Repeating cycle",
+            "time": 1140
+          },
+          {
+            "label": "Attack wave",
+            "tech": 6,
+            "strength": 6,
+            "notes": "Repeating cycle",
+            "time": 1260
+          },
+          {
+            "label": "Attack wave",
+            "tech": 4,
+            "strength": 6,
+            "notes": "Repeating cycle",
+            "time": 1380
+          },
+          {
+            "label": "Attack wave",
+            "tech": 4,
+            "strength": 6,
+            "notes": "Repeating cycle",
+            "time": 1500
+          }
+        ]
+      },
+      "objectives": {
+        "Casual": [],
+        "Normal": [],
+        "Hard": [],
+        "Brutal": []
+      }
+    },
+    "Malwarfare": {
+      "attack_waves": {
+        "Casual": [],
+        "Normal": [],
+        "Hard": [
+          {
+            "label": "Attack wave",
+            "time": 408
+          }
+        ],
+        "Brutal": [
+          {
+            "label": "Attack wave",
+            "tech": 1,
+            "strength": 1,
+            "time": 216
+          }
+        ]
+      },
+      "objectives": {
+        "Casual": [],
+        "Normal": [],
+        "Hard": [],
+        "Brutal": []
+      }
+    },
+    "Miner Evacuation": {
+      "attack_waves": {
+        "Casual": [],
+        "Normal": [],
+        "Hard": [
+          {
+            "label": "Attack wave",
+            "time": 400
+          },
+          {
+            "label": "Attack wave",
+            "time": 787
+          },
+          {
+            "label": "Attack wave",
+            "time": 913
+          },
+          {
+            "label": "Attack wave",
+            "time": 1058
+          },
+          {
+            "label": "Attack wave",
+            "time": 1159
+          },
+          {
+            "label": "Attack wave",
+            "time": 1290
+          },
+          {
+            "label": "Attack wave",
+            "time": 1389
+          },
+          {
+            "label": "Attack wave",
+            "time": 1561
+          },
+          {
+            "label": "Attack wave",
+            "time": 1695
+          }
+        ],
+        "Brutal": [
+          {
+            "label": "Attack wave",
+            "time": 390,
+            "tech": 2,
+            "strength": 2
+          },
+          {
+            "label": "Claimer wave",
+            "time": 480,
+            "tech": 1,
+            "strength": 1
+          },
+          {
+            "label": "Attack wave",
+            "time": 780,
+            "tech": 3,
+            "strength": 3
+          },
+          {
+            "label": "Claimer wave",
+            "time": 912,
+            "tech": 2,
+            "strength": 2
+          },
+          {
+            "label": "Attack wave",
+            "time": 1050,
+            "tech": 4,
+            "strength": 4
+          },
+          {
+            "label": "Claimer wave",
+            "time": 1158,
+            "tech": 1,
+            "strength": 1
+          },
+          {
+            "label": "Claimer wave",
+            "time": 1164,
+            "tech": 1,
+            "strength": 1
+          },
+          {
+            "label": "Attack wave",
+            "time": 1380,
+            "tech": 5,
+            "strength": 5
+          },
+          {
+            "label": "Claimer wave",
+            "time": 1560,
+            "tech": 4,
+            "strength": 4
+          },
+          {
+            "label": "Attack wave",
+            "time": 1590,
+            "tech": 4,
+            "strength": 4
+          },
+          {
+            "label": "Attack wave",
+            "time": 1680,
+            "tech": 6,
+            "strength": 6
+          },
+          {
+            "label": "Attack wave",
+            "time": 1920,
+            "tech": 6,
+            "strength": 6
+          }
+        ]
+      },
+      "objectives": {
+        "Casual": [],
+        "Normal": [],
+        "Hard": [],
+        "Brutal": [
+          {
+            "label": "Panic Time",
+            "time": 225
+          },
+          {
+            "label": "Panic Time",
+            "time": 720
+          },
+          {
+            "label": "Panic Time",
+            "time": 990
+          },
+          {
+            "label": "Panic Time",
+            "time": 1410
+          },
+          {
+            "label": "Panic Time",
+            "time": 1620
+          },
+          {
+            "label": "Panic Time",
+            "time": 1740
+          }
+        ]
+      }
+    },
+    "Mist Opportunities": {
+      "attack_waves": {
+        "Casual": [],
+        "Normal": [],
+        "Hard": [
+          {
+            "label": "Attack wave",
+            "time": 495
+          },
+          {
+            "label": "Attack wave",
+            "time": 744
+          },
+          {
+            "label": "Attack wave",
+            "time": 1118
+          },
+          {
+            "label": "Attack wave",
+            "time": 1509
+          },
+          {
+            "label": "Attack wave",
+            "time": 1704
+          }
+        ],
+        "Brutal": [
+          {
+            "label": "Attack wave",
+            "tech": 1,
+            "strength": 1,
+            "time": 180
+          },
+          {
+            "label": "Attack wave",
+            "tech": 3,
+            "strength": 3,
+            "time": 600
+          },
+          {
+            "label": "Attack wave",
+            "tech": 4,
+            "strength": 4,
+            "time": 930
+          },
+          {
+            "label": "Attack wave",
+            "tech": 5,
+            "strength": 5,
+            "time": 1275
+          },
+          {
+            "label": "Attack wave",
+            "tech": 6,
+            "strength": 6,
+            "time": 1686
+          }
+        ]
+      },
+      "objectives": {
+        "Casual": [],
+        "Normal": [],
+        "Hard": [],
+        "Brutal": [
+          {
+            "label": "Harvester bot wave 1 leaves",
+            "time": 255
+          },
+          {
+            "label": "Harvester bot wave 2 leaves",
+            "time": 475
+          },
+          {
+            "label": "Harvester bot wave 3 leaves",
+            "time": 730
+          },
+          {
+            "label": "Harvester bot wave 4 leaves",
+            "time": 1100
+          },
+          {
+            "label": "Harvester bot wave 5 leaves",
+            "time": 1500
+          }
+        ]
+      }
+    },
+    "Oblivion Express": {
+      "attack_waves": {
+        "Casual": [],
+        "Normal": [],
+        "Hard": [
+          {
+            "label": "Attack wave",
+            "time": 241
+          },
+          {
+            "label": "Attack wave",
+            "time": 334
+          },
+          {
+            "label": "Attack wave",
+            "time": 481
+          },
+          {
+            "label": "Attack wave",
+            "time": 601
+          },
+          {
+            "label": "Attack wave",
+            "time": 749
+          },
+          {
+            "label": "Attack wave",
+            "time": 934
+          },
+          {
+            "label": "Attack wave",
+            "time": 1141
+          },
+          {
+            "label": "Attack wave",
+            "time": 1321
+          },
+          {
+            "label": "Attack wave",
+            "time": 1491
+          }
+        ],
+        "Brutal": [
+          {
+            "label": "Attack wave",
+            "tech": 1,
+            "strength": 1,
+            "spawn": "North",
+            "time": 240
+          },
+          {
+            "label": "Attack wave",
+            "tech": 2,
+            "strength": 2,
+            "spawn": "South",
+            "time": 360
+          },
+          {
+            "label": "Attack wave",
+            "tech": 1,
+            "strength": 1,
+            "spawn": "North",
+            "time": 420
+          },
+          {
+            "label": "Attack wave",
+            "tech": 3,
+            "strength": 3,
+            "spawn": "South",
+            "time": 600
+          },
+          {
+            "label": "Attack wave",
+            "tech": 4,
+            "strength": 4,
+            "spawn": "North",
+            "time": 780
+          },
+          {
+            "label": "Attack wave",
+            "tech": 5,
+            "strength": 5,
+            "spawn": "North",
+            "time": 960
+          },
+          {
+            "label": "Attack wave",
+            "tech": 6,
+            "strength": 6,
+            "spawn": "South",
+            "time": 1140
+          },
+          {
+            "label": "Attack wave",
+            "tech": 7,
+            "strength": 7,
+            "spawn": "North",
+            "time": 1320
+          },
+          {
+            "label": "Attack wave",
+            "tech": 7,
+            "strength": 7,
+            "spawn": "South",
+            "time": 1440
+          }
+        ]
+      },
+      "objectives": {
+        "Casual": [],
+        "Normal": [],
+        "Hard": [],
+        "Brutal": [
+          {
+            "label": "Train 1",
+            "spawn": "Top Rail",
+            "tech": 2,
+            "strength": 2,
+            "time": 300
+          },
+          {
+            "label": "Train 2",
+            "spawn": "Mid Rail",
+            "tech": 3,
+            "strength": 4,
+            "time": 480
+          },
+          {
+            "label": "Train 3",
+            "spawn": "Top Rail",
+            "tech": 4,
+            "strength": 5,
+            "time": 660
+          },
+          {
+            "label": "Trains 4 & 5",
+            "spawn": "Top/Mid Rail",
+            "tech": 6,
+            "strength": 6,
+            "time": 840
+          },
+          {
+            "label": "Train 6",
+            "spawn": "Mid Rail",
+            "tech": 7,
+            "strength": 6,
+            "time": 1020
+          },
+          {
+            "label": "Trains 7 & 8",
+            "spawn": "Top/Mid Rail",
+            "tech": 5,
+            "strength": 5,
+            "time": 1200
+          },
+          {
+            "label": "Train 9",
+            "spawn": "Mid Rail",
+            "tech": 7,
+            "strength": 7,
+            "time": 1380
+          },
+          {
+            "label": "Train 10",
+            "spawn": "Top/Mid Rail",
+            "tech": 7,
+            "strength": 7,
+            "time": 1500
+          }
+        ]
+      }
+    },
+    "Part and Parcel": {
+      "attack_waves": {
+        "Casual": [],
+        "Normal": [],
+        "Hard": [
+          {
+            "label": "Attack wave",
+            "time": 391
+          },
+          {
+            "label": "Attack wave",
+            "time": 601
+          },
+          {
+            "label": "Attack wave",
+            "time": 847
+          },
+          {
+            "label": "Attack wave",
+            "time": 1033
+          },
+          {
+            "label": "Attack wave",
+            "time": 1201
+          },
+          {
+            "label": "Attack wave",
+            "time": 1406
+          },
+          {
+            "label": "Attack wave",
+            "time": 1621
+          },
+          {
+            "label": "Attack wave",
+            "time": 1801
+          }
+        ],
+        "Brutal": [
+          {
+            "label": "Attack wave",
+            "tech": 1,
+            "strength": 1,
+            "spawn": "Main Base",
+            "time": 225
+          },
+          {
+            "label": "Attack wave",
+            "tech": 2,
+            "strength": 2,
+            "spawn": "Main Base",
+            "time": 390
+          },
+          {
+            "label": "Attack wave",
+            "tech": 3,
+            "strength": 3,
+            "spawn": "Expansion",
+            "time": 600
+          },
+          {
+            "label": "Attack wave",
+            "tech": 4,
+            "strength": 4,
+            "spawn": "Main Base",
+            "time": 846
+          },
+          {
+            "label": "Attack wave",
+            "tech": 5,
+            "strength": 5,
+            "spawn": "Expansion",
+            "time": 1032
+          },
+          {
+            "label": "Attack wave",
+            "tech": 6,
+            "strength": 6,
+            "spawn": "Main Base",
+            "time": 1200
+          },
+          {
+            "label": "Attack wave",
+            "tech": 7,
+            "strength": 7,
+            "spawn": "Army",
+            "time": 1440
+          },
+          {
+            "label": "Attack wave",
+            "tech": 5,
+            "strength": 5,
+            "spawn": "Main Base",
+            "time": 1620
+          },
+          {
+            "label": "Attack wave",
+            "tech": 6,
+            "strength": 6,
+            "spawn": "Main Base",
+            "time": 1800
+          }
+        ]
+      },
+      "objectives": {
+        "Casual": [],
+        "Normal": [],
+        "Hard": [],
+        "Brutal": [
+          {
+            "label": "Bonus train 1",
+            "spawn": "Left",
+            "time": 480
+          },
+          {
+            "label": "Bonus train 2",
+            "spawn": "Right",
+            "time": 900
+          }
+        ]
+      }
+    },
+    "Rifts to Korhal": {
+      "attack_waves": {
+        "Casual": [],
+        "Normal": [],
+        "Hard": [
+          {
+            "label": "Attack wave",
+            "time": 121
+          },
+          {
+            "label": "Attack wave",
+            "time": 301
+          },
+          {
+            "label": "Attack wave",
+            "time": 481
+          },
+          {
+            "label": "Attack wave",
+            "time": 661
+          },
+          {
+            "label": "Attack wave",
+            "time": 841
+          },
+          {
+            "label": "Attack wave",
+            "time": 1021
+          },
+          {
+            "label": "Attack wave",
+            "time": 1231
+          },
+          {
+            "label": "Attack wave",
+            "time": 1471
+          },
+          {
+            "label": "Attack wave",
+            "time": 1591
+          }
+        ],
+        "Brutal": [
+          {
+            "label": "Attack wave",
+            "tech": 1,
+            "strength": 1,
+            "time": 120
+          },
+          {
+            "label": "Attack wave",
+            "tech": 2,
+            "strength": 2,
+            "time": 300
+          },
+          {
+            "label": "Attack wave",
+            "tech": 3,
+            "strength": 3,
+            "time": 480
+          },
+          {
+            "label": "Attack wave",
+            "tech": 4,
+            "strength": 4,
+            "time": 660
+          },
+          {
+            "label": "Attack wave",
+            "tech": 5,
+            "strength": 5,
+            "time": 840
+          },
+          {
+            "label": "Attack wave",
+            "tech": 6,
+            "strength": 6,
+            "time": 1020
+          },
+          {
+            "label": "Attack wave",
+            "tech": 7,
+            "strength": 7,
+            "time": 1230
+          },
+          {
+            "label": "Attack wave",
+            "tech": 7,
+            "strength": 7,
+            "time": 1470
+          },
+          {
+            "label": "Attack wave",
+            "tech": 7,
+            "strength": 7,
+            "time": 1590
+          },
+          {
+            "label": "Attack wave",
+            "tech": 7,
+            "strength": 7,
+            "time": 1710
+          },
+          {
+            "label": "Attack wave",
+            "tech": 7,
+            "strength": 7,
+            "time": 1800
+          }
+        ]
+      },
+      "objectives": {
+        "Casual": [],
+        "Normal": [],
+        "Hard": [],
+        "Brutal": [
+          {
+            "label": "Pirate ship 1",
+            "time": 700
+          }
+        ]
+      }
+    },
+    "Scythe of Amon": {
+      "attack_waves": {
+        "Casual": [],
+        "Normal": [],
+        "Hard": [
+          {
+            "label": "Attack wave",
+            "time": 421
+          },
+          {
+            "label": "Attack wave",
+            "time": 541
+          },
+          {
+            "label": "Attack wave",
+            "time": 751
+          },
+          {
+            "label": "Attack wave",
+            "time": 961
+          },
+          {
+            "label": "Attack wave",
+            "time": 1141
+          },
+          {
+            "label": "Attack wave",
+            "time": 1321
+          },
+          {
+            "label": "Attack wave",
+            "time": 1441
+          }
+        ],
+        "Brutal": [
+          {
+            "label": "Attack wave",
+            "tech": 1,
+            "strength": 1,
+            "time": 168
+          },
+          {
+            "label": "Attack wave",
+            "tech": 2,
+            "strength": 2,
+            "time": 420
+          },
+          {
+            "label": "Attack wave",
+            "tech": 3,
+            "strength": 3,
+            "time": 540
+          },
+          {
+            "label": "Attack wave",
+            "tech": 4,
+            "strength": 4,
+            "time": 750
+          },
+          {
+            "label": "Attack wave",
+            "tech": 5,
+            "strength": 5,
+            "time": 960
+          },
+          {
+            "label": "Attack wave",
+            "tech": 6,
+            "strength": 6,
+            "time": 1140
+          },
+          {
+            "label": "Attack wave",
+            "tech": 5,
+            "strength": 5,
+            "time": 1320
+          },
+          {
+            "label": "Attack wave",
+            "tech": 6,
+            "strength": 6,
+            "time": 1440
+          },
+          {
+            "label": "Attack wave",
+            "tech": 6,
+            "strength": 6,
+            "time": 1560
+          }
+        ]
+      },
+      "objectives": {
+        "Casual": [],
+        "Normal": [],
+        "Hard": [],
+        "Brutal": []
+      }
+    },
+    "Temple of the Past": {
+      "attack_waves": {
+        "Casual": [],
+        "Normal": [],
+        "Hard": [
+          {
+            "label": "Attack wave",
+            "time": 251
+          },
+          {
+            "label": "Attack wave",
+            "time": 361
+          },
+          {
+            "label": "Attack wave",
+            "time": 451
+          },
+          {
+            "label": "Attack wave",
+            "time": 541
+          },
+          {
+            "label": "Attack wave",
+            "time": 631
+          },
+          {
+            "label": "Attack wave",
+            "time": 736
+          },
+          {
+            "label": "Attack wave",
+            "time": 858
+          },
+          {
+            "label": "Attack wave",
+            "time": 951
+          },
+          {
+            "label": "Attack wave",
+            "time": 1081
+          },
+          {
+            "label": "Attack wave",
+            "time": 1201
+          },
+          {
+            "label": "Attack wave",
+            "time": 1302
+          },
+          {
+            "label": "Attack wave",
+            "time": 1411
+          }
+        ],
+        "Brutal": [
+          {
+            "label": "Attack wave",
+            "time": 180,
+            "tech": 1,
+            "strength": 1,
+            "spawn": "\u2197",
+            "pattern": "A"
+          },
+          {
+            "label": "Attack wave",
+            "time": 180,
+            "tech": 1,
+            "strength": 1,
+            "spawn": "\u2197",
+            "pattern": "B"
+          },
+          {
+            "label": "Attack wave",
+            "time": 240,
+            "tech": 2,
+            "strength": 2,
+            "spawn": "\u2197",
+            "pattern": "A"
+          },
+          {
+            "label": "Attack wave",
+            "time": 250,
+            "tech": 2,
+            "strength": 2,
+            "spawn": "\u2197",
+            "pattern": "B"
+          },
+          {
+            "label": "Attack wave",
+            "time": 360,
+            "tech": 2,
+            "strength": 2,
+            "spawn": "\u2197",
+            "pattern": "A"
+          },
+          {
+            "label": "Attack wave",
+            "time": 360,
+            "tech": 2,
+            "strength": 2,
+            "spawn": "\u2197",
+            "pattern": "B"
+          },
+          {
+            "label": "Attack wave",
+            "time": 405,
+            "tech": 1,
+            "strength": 2,
+            "spawn": "\u2197",
+            "pattern": "A"
+          },
+          {
+            "label": "Attack wave",
+            "time": 405,
+            "tech": 1,
+            "strength": 1,
+            "spawn": "\u2197",
+            "pattern": "B"
+          },
+          {
+            "label": "Attack wave",
+            "time": 450,
+            "tech": 2,
+            "strength": 2,
+            "spawn": "\u2197",
+            "pattern": "A"
+          },
+          {
+            "label": "Attack wave",
+            "time": 450,
+            "tech": 2,
+            "strength": 3,
+            "spawn": "\u2197",
+            "pattern": "B"
+          },
+          {
+            "label": "Attack wave",
+            "time": 495,
+            "tech": 2,
+            "strength": 2,
+            "spawn": "\u2197",
+            "pattern": "A"
+          },
+          {
+            "label": "Attack wave",
+            "time": 540,
+            "tech": 3,
+            "strength": 3,
+            "spawn": "\u2198\u2196",
+            "pattern": "A"
+          },
+          {
+            "label": "Attack wave",
+            "time": 540,
+            "tech": 3,
+            "strength": 3,
+            "spawn": "\u2198 or \u2196",
+            "pattern": "B"
+          },
+          {
+            "label": "Attack wave",
+            "time": 600,
+            "tech": 4,
+            "strength": 3,
+            "spawn": "\u2198\u2196",
+            "pattern": "A"
+          },
+          {
+            "label": "Attack wave",
+            "time": 600,
+            "tech": 4,
+            "strength": 3,
+            "spawn": "\u2198\u2196",
+            "pattern": "B"
+          },
+          {
+            "label": "Attack wave",
+            "time": 660,
+            "tech": 4,
+            "strength": 4,
+            "spawn": "\u2198\u2196",
+            "pattern": "A"
+          },
+          {
+            "label": "Attack wave",
+            "time": 660,
+            "tech": 4,
+            "strength": 4,
+            "spawn": "\u2196 or \u2198",
+            "pattern": "B"
+          },
+          {
+            "label": "Attack wave",
+            "time": 720,
+            "tech": 3,
+            "strength": 4,
+            "spawn": "\u2197",
+            "pattern": "A"
+          },
+          {
+            "label": "Attack wave",
+            "time": 720,
+            "tech": 3,
+            "strength": 4,
+            "spawn": "\u2197",
+            "pattern": "B"
+          },
+          {
+            "label": "Attack wave",
+            "time": 750,
+            "tech": 4,
+            "strength": 4,
+            "spawn": "\u2197",
+            "pattern": "A"
+          },
+          {
+            "label": "Attack wave",
+            "time": 750,
+            "tech": 4,
+            "strength": 4,
+            "spawn": "\u2197",
+            "pattern": "B"
+          },
+          {
+            "label": "Attack wave",
+            "time": 795,
+            "tech": 5,
+            "strength": 4,
+            "spawn": "\u2197",
+            "pattern": "A"
+          },
+          {
+            "label": "Attack wave",
+            "time": 815,
+            "tech": 5,
+            "strength": 4,
+            "spawn": "\u2196",
+            "pattern": "B"
+          },
+          {
+            "label": "Attack wave",
+            "time": 900,
+            "tech": 3,
+            "strength": 3,
+            "spawn": "\u2199",
+            "pattern": "A"
+          },
+          {
+            "label": "Attack wave",
+            "time": 900,
+            "tech": 2,
+            "strength": 2,
+            "spawn": "\u2199",
+            "pattern": "B"
+          },
+          {
+            "label": "Attack wave",
+            "time": 920,
+            "tech": 4,
+            "strength": 4,
+            "spawn": "\u2199",
+            "pattern": "A"
+          },
+          {
+            "label": "Attack wave",
+            "time": 930,
+            "tech": 3,
+            "strength": 3,
+            "spawn": "\u2199",
+            "pattern": "B"
+          },
+          {
+            "label": "Attack wave",
+            "time": 970,
+            "tech": 2,
+            "strength": 2,
+            "spawn": "\u2199",
+            "pattern": "A"
+          },
+          {
+            "label": "Attack wave",
+            "time": 995,
+            "tech": 3,
+            "strength": 3,
+            "spawn": "\u2199",
+            "pattern": "B"
+          },
+          {
+            "label": "Attack wave",
+            "time": 1000,
+            "tech": 3,
+            "strength": 3,
+            "spawn": "\u2199",
+            "pattern": "A"
+          },
+          {
+            "label": "Attack wave",
+            "time": 1015,
+            "tech": 4,
+            "strength": 4,
+            "spawn": "\u2199",
+            "pattern": "B"
+          },
+          {
+            "label": "Attack wave",
+            "time": 1080,
+            "tech": 5,
+            "strength": 5,
+            "spawn": "\u2198",
+            "pattern": "A"
+          },
+          {
+            "label": "Attack wave",
+            "time": 1080,
+            "tech": 5,
+            "strength": 5,
+            "spawn": "\u2198 or \u2197",
+            "pattern": "B"
+          },
+          {
+            "label": "Attack wave",
+            "time": 1095,
+            "tech": 3,
+            "strength": 5,
+            "spawn": "\u2196",
+            "pattern": "A"
+          },
+          {
+            "label": "Attack wave",
+            "time": 1095,
+            "tech": 3,
+            "strength": 5,
+            "spawn": "\u2196 or \u2197",
+            "pattern": "B"
+          },
+          {
+            "label": "Attack wave",
+            "time": 1155,
+            "tech": 4,
+            "strength": 4,
+            "spawn": "\u2199",
+            "pattern": "A"
+          },
+          {
+            "label": "Attack wave",
+            "time": 1155,
+            "tech": 4,
+            "strength": 4,
+            "spawn": "\u2199",
+            "pattern": "B"
+          },
+          {
+            "label": "Attack wave",
+            "time": 1200,
+            "tech": 5,
+            "strength": 5,
+            "spawn": "\u2197",
+            "pattern": "A"
+          },
+          {
+            "label": "Attack wave",
+            "time": 1200,
+            "tech": 4,
+            "strength": 5,
+            "spawn": "\u2197",
+            "pattern": "B"
+          },
+          {
+            "label": "Attack wave",
+            "time": 1215,
+            "tech": 3,
+            "strength": 3,
+            "spawn": "\u2199\u2199",
+            "pattern": "A"
+          },
+          {
+            "label": "Attack wave",
+            "time": 1220,
+            "tech": 3,
+            "strength": 3,
+            "spawn": "\u2199",
+            "pattern": "B"
+          },
+          {
+            "label": "Attack wave",
+            "time": 1240,
+            "tech": 2,
+            "strength": 3,
+            "spawn": "\u2199",
+            "pattern": "B"
+          },
+          {
+            "label": "Attack wave",
+            "time": 1245,
+            "tech": 2,
+            "strength": 4,
+            "spawn": "\u2196\u2196",
+            "pattern": "A"
+          },
+          {
+            "label": "Attack wave",
+            "time": 1275,
+            "tech": 3,
+            "strength": 3,
+            "spawn": "\u2197\u2197",
+            "pattern": "A"
+          },
+          {
+            "label": "Attack wave",
+            "time": 1290,
+            "tech": 2,
+            "strength": 3,
+            "spawn": "\u2199\u2199",
+            "pattern": "A"
+          },
+          {
+            "label": "Attack wave",
+            "time": 1320,
+            "tech": 6,
+            "strength": 5,
+            "spawn": "\u2197",
+            "pattern": "A"
+          },
+          {
+            "label": "Attack wave",
+            "time": 1350,
+            "tech": 4,
+            "strength": 6,
+            "spawn": "\u2198\u2196",
+            "pattern": "A"
+          },
+          {
+            "label": "Attack wave",
+            "time": 1350,
+            "tech": 4,
+            "strength": 6,
+            "spawn": "\u2198\u2196",
+            "pattern": "B"
+          },
+          {
+            "label": "Attack wave",
+            "time": 1410,
+            "tech": 5,
+            "strength": 5,
+            "spawn": "\u2198",
+            "pattern": "A"
+          },
+          {
+            "label": "Attack wave",
+            "time": 1410,
+            "tech": 5,
+            "strength": 5,
+            "spawn": "\u2198",
+            "pattern": "B"
+          },
+          {
+            "label": "Attack wave",
+            "time": 1420,
+            "tech": 3,
+            "strength": 5,
+            "spawn": "\u2196",
+            "pattern": "A"
+          },
+          {
+            "label": "Attack wave",
+            "time": 1420,
+            "tech": 3,
+            "strength": 5,
+            "spawn": "\u2196",
+            "pattern": "B"
+          },
+          {
+            "label": "Attack wave",
+            "time": 1480,
+            "tech": 5,
+            "strength": 6,
+            "spawn": "\u2198\u2196\u2197",
+            "pattern": "A"
+          },
+          {
+            "label": "Attack wave",
+            "time": 1480,
+            "tech": 5,
+            "strength": 6,
+            "spawn": "\u2198\u2196\u2197",
+            "pattern": "B"
+          }
+        ]
+      },
+      "objectives": {
+        "Casual": [],
+        "Normal": [],
+        "Hard": [],
+        "Brutal": [
+          {
+            "label": "Void Thrasher",
+            "time": 495,
+            "spawn": "\u2199",
+            "pattern": "B"
+          },
+          {
+            "label": "Void Thrasher",
+            "time": 495,
+            "spawn": "\u2199",
+            "pattern": "A"
+          },
+          {
+            "label": "Void Thrasher",
+            "time": 825,
+            "spawn": "\u2196",
+            "pattern": "A"
+          },
+          {
+            "label": "Void Thrasher",
+            "time": 825,
+            "spawn": "\u2196",
+            "pattern": "B"
+          },
+          {
+            "label": "Void Thrasher",
+            "time": 945,
+            "spawn": "\u2198",
+            "pattern": "B"
+          },
+          {
+            "label": "Void Thrasher",
+            "time": 1015,
+            "spawn": "\u2198",
+            "pattern": "A"
+          },
+          {
+            "label": "Void Thrasher",
+            "time": 1200,
+            "spawn": "\u2199",
+            "pattern": "B"
+          },
+          {
+            "label": "Double Thrasher",
+            "time": 1350,
+            "spawn": "\u2198\u2196",
+            "pattern": "A"
+          },
+          {
+            "label": "Double Thrasher",
+            "time": 1350,
+            "spawn": "\u2198\u2196",
+            "pattern": "B"
+          },
+          {
+            "label": "Defend temple timer ends",
+            "time": 1560
+          }
+        ]
+      }
+    },
+    "The Vermillion Problem": {
+      "attack_waves": {
+        "Casual": [],
+        "Normal": [],
+        "Hard": [
+          {
+            "label": "Attack wave",
+            "time": 361
+          },
+          {
+            "label": "Attack wave",
+            "time": 653
+          },
+          {
+            "label": "Attack wave",
+            "time": 946
+          },
+          {
+            "label": "Attack wave",
+            "time": 1053
+          },
+          {
+            "label": "Attack wave",
+            "time": 1266
+          },
+          {
+            "label": "Attack wave",
+            "time": 1621
+          },
+          {
+            "label": "Attack wave",
+            "time": 1801
+          },
+          {
+            "label": "Attack wave",
+            "time": 2041
+          },
+          {
+            "label": "Attack wave",
+            "time": 2317
+          }
+        ],
+        "Brutal": [
+          {
+            "label": "Attack wave",
+            "tech": 1,
+            "strength": 1,
+            "spawn": "Main",
+            "time": 210
+          },
+          {
+            "label": "Attack wave",
+            "tech": 2,
+            "strength": 2,
+            "spawn": "Main",
+            "time": 360
+          },
+          {
+            "label": "Attack wave",
+            "tech": 3,
+            "strength": 4,
+            "spawn": "Expansion",
+            "notes": "\u00b11:30 variance",
+            "time": 540
+          },
+          {
+            "label": "Attack wave",
+            "tech": 3,
+            "strength": 4,
+            "spawn": "Expansion",
+            "notes": "\u00b11:30 variance",
+            "time": 720
+          },
+          {
+            "label": "Attack wave",
+            "tech": 5,
+            "strength": 5,
+            "spawn": "Main",
+            "notes": "\u00b11:30 variance",
+            "time": 900
+          },
+          {
+            "label": "Attack wave",
+            "tech": 5,
+            "strength": 5,
+            "spawn": "Main",
+            "notes": "\u00b11:30 variance",
+            "time": 1080
+          },
+          {
+            "label": "Attack wave",
+            "tech": 5,
+            "strength": 5,
+            "spawn": "Expansion",
+            "notes": "\u00b11:30 variance",
+            "time": 1260
+          },
+          {
+            "label": "Attack wave",
+            "tech": 6,
+            "strength": 6,
+            "spawn": "Expansion",
+            "notes": "\u00b11:30 variance",
+            "time": 1440
+          },
+          {
+            "label": "Attack wave",
+            "tech": 5,
+            "strength": 5,
+            "spawn": "Expansion",
+            "time": 1620
+          }
+        ]
+      },
+      "objectives": {
+        "Casual": [],
+        "Normal": [],
+        "Hard": [],
+        "Brutal": []
+      }
+    },
+    "Void Launch": {
+      "attack_waves": {
+        "Casual": [],
+        "Normal": [],
+        "Hard": [
+          {
+            "label": "Attack wave",
+            "time": 301
+          },
+          {
+            "label": "Attack wave",
+            "time": 451
+          },
+          {
+            "label": "Attack wave",
+            "time": 594
+          },
+          {
+            "label": "Attack wave",
+            "time": 841
+          },
+          {
+            "label": "Attack wave",
+            "time": 978
+          },
+          {
+            "label": "Attack wave",
+            "time": 1100
+          },
+          {
+            "label": "Attack wave",
+            "time": 1301
+          },
+          {
+            "label": "Attack wave",
+            "time": 1429
+          }
+        ],
+        "Brutal": [
+          {
+            "label": "Attack wave",
+            "tech": 1,
+            "strength": 1,
+            "spawn": "Right",
+            "time": 180
+          },
+          {
+            "label": "Attack wave",
+            "tech": 2,
+            "strength": 2,
+            "spawn": "Left",
+            "time": 300
+          },
+          {
+            "label": "Attack wave",
+            "tech": 2,
+            "strength": 2,
+            "time": 450
+          },
+          {
+            "label": "Attack wave",
+            "tech": 3,
+            "strength": 3,
+            "spawn": "Right",
+            "time": 600
+          },
+          {
+            "label": "Attack wave",
+            "tech": 3,
+            "strength": 3,
+            "spawn": "Left",
+            "time": 660
+          },
+          {
+            "label": "Attack wave",
+            "tech": 3,
+            "strength": 3,
+            "time": 840
+          },
+          {
+            "label": "Attack wave",
+            "tech": 4,
+            "strength": 4,
+            "spawn": "Left",
+            "time": 1008
+          },
+          {
+            "label": "Attack wave",
+            "tech": 5,
+            "strength": 5,
+            "spawn": "Right",
+            "time": 1158
+          },
+          {
+            "label": "Attack wave",
+            "tech": 6,
+            "strength": 6,
+            "spawn": "Right",
+            "time": 1308
+          },
+          {
+            "label": "Attack wave",
+            "tech": 7,
+            "strength": 7,
+            "spawn": "Right",
+            "time": 1458
+          }
+        ]
+      },
+      "objectives": {
+        "Casual": [],
+        "Normal": [],
+        "Hard": [],
+        "Brutal": [
+          {
+            "label": "Shuttle wave 1",
+            "spawn": "Middle",
+            "tech": 1,
+            "strength": 1,
+            "time": 378
+          },
+          {
+            "label": "Shuttle wave 2",
+            "tech": 2,
+            "strength": 2,
+            "time": 540
+          },
+          {
+            "label": "Shuttle wave 3",
+            "tech": 3,
+            "strength": 3,
+            "time": 750
+          },
+          {
+            "label": "Shuttle wave 4",
+            "tech": 3,
+            "strength": 3,
+            "time": 930
+          },
+          {
+            "label": "Shuttle wave 5",
+            "tech": 3,
+            "strength": 3,
+            "time": 1080
+          },
+          {
+            "label": "Shuttle wave 6",
+            "tech": 6,
+            "strength": 6,
+            "time": 1230
+          },
+          {
+            "label": "Shuttle wave 7",
+            "tech": 7,
+            "strength": 6,
+            "time": 1380
+          }
+        ]
+      }
+    },
+    "Void Thrashing": {
+      "attack_waves": {
+        "Casual": [],
+        "Normal": [],
+        "Hard": [
+          {
+            "label": "Attack wave",
+            "time": 241
+          },
+          {
+            "label": "Attack wave",
+            "time": 481
+          },
+          {
+            "label": "Attack wave",
+            "time": 601
+          },
+          {
+            "label": "Attack wave",
+            "time": 841
+          },
+          {
+            "label": "Attack wave",
+            "time": 961
+          },
+          {
+            "label": "Attack wave",
+            "time": 1081
+          },
+          {
+            "label": "Attack wave",
+            "time": 1291
+          }
+        ],
+        "Brutal": [
+          {
+            "label": "Attack wave",
+            "tech": 1,
+            "strength": 1,
+            "spawn": "Right",
+            "pattern": "A",
+            "time": 180
+          },
+          {
+            "label": "Attack wave",
+            "tech": 1,
+            "strength": 2,
+            "spawn": "Left",
+            "pattern": "B",
+            "time": 240
+          },
+          {
+            "label": "Attack wave",
+            "tech": 2,
+            "strength": 2,
+            "spawn": "Right",
+            "pattern": "A",
+            "time": 360
+          },
+          {
+            "label": "Attack wave",
+            "tech": 2,
+            "strength": 3,
+            "spawn": "Right",
+            "pattern": "B",
+            "time": 480
+          },
+          {
+            "label": "Attack wave",
+            "tech": 3,
+            "strength": 3,
+            "spawn": "Left",
+            "pattern": "A",
+            "time": 540
+          },
+          {
+            "label": "Attack wave",
+            "tech": 3,
+            "strength": 3,
+            "spawn": "Left",
+            "pattern": "B",
+            "time": 600
+          },
+          {
+            "label": "Attack wave",
+            "tech": 4,
+            "strength": 4,
+            "spawn": "Left",
+            "pattern": "A",
+            "time": 720
+          },
+          {
+            "label": "Attack wave",
+            "tech": 4,
+            "strength": 5,
+            "spawn": "Left",
+            "pattern": "B",
+            "time": 840
+          },
+          {
+            "label": "Attack wave",
+            "tech": 5,
+            "strength": 5,
+            "spawn": "Right",
+            "pattern": "A",
+            "time": 900
+          },
+          {
+            "label": "Attack wave",
+            "tech": 5,
+            "strength": 4,
+            "spawn": "Right",
+            "pattern": "B",
+            "time": 960
+          },
+          {
+            "label": "Attack wave",
+            "tech": 6,
+            "strength": 6,
+            "spawn": "Right",
+            "pattern": "A",
+            "time": 1080
+          },
+          {
+            "label": "Attack wave",
+            "tech": 6,
+            "strength": 7,
+            "spawn": "Left",
+            "pattern": "B",
+            "time": 1200
+          },
+          {
+            "label": "Attack wave",
+            "tech": 7,
+            "strength": 7,
+            "spawn": "Left",
+            "pattern": "A",
+            "time": 1260
+          },
+          {
+            "label": "Attack wave",
+            "tech": 7,
+            "strength": 7,
+            "spawn": "Right",
+            "pattern": "B",
+            "time": 1320
+          },
+          {
+            "label": "Attack wave",
+            "tech": 7,
+            "strength": 7,
+            "spawn": "Right",
+            "pattern": "A",
+            "time": 1440
+          },
+          {
+            "label": "Attack wave",
+            "tech": 7,
+            "strength": 7,
+            "spawn": "Left",
+            "pattern": "B",
+            "time": 1560
+          }
+        ]
+      },
+      "objectives": {
+        "Casual": [],
+        "Normal": [],
+        "Hard": [],
+        "Brutal": [
+          {
+            "label": "Void Thrasher set 1",
+            "time": 270
+          },
+          {
+            "label": "Void Thrasher set 2",
+            "time": 560
+          },
+          {
+            "label": "Void Thrasher set 3",
+            "time": 820
+          },
+          {
+            "label": "Void Thrasher set 4",
+            "time": 1080
+          }
+        ]
+      }
+    }
+  }
+}
