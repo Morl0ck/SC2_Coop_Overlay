@@ -608,6 +608,8 @@ function fillunits(el, dat, commander, color, total_kills = null) {
 // ---------------------------------------------------------------------------
 var missionEvents = [];          // pre-sorted list of {time, kind, label, ...}
 var missionMapName = '';
+var missionDifficulty = 'Brutal';
+var missionTimingDifficulty = 'Brutal';
 var missionHasPatterns = false;
 var missionSyncedTime = 0;       // last displayTime received from SC2 (game-clock seconds)
 var missionSyncWall = 0;         // Date.now() when missionSyncedTime was set
@@ -624,7 +626,9 @@ var missionCfg = {
     anchor_h: 'left', anchor_v: 'bottom',
     offset_x: 2, offset_y: 27,
     opacity: 0.9,
-    show_previous: true, show_next: true,
+    background_opacity: 0.4,
+    panel_width: 22,
+    show_previous: true, show_upcoming: true,
     font_next: 1.55, font_other: 1.2
 };
 
@@ -633,6 +637,7 @@ function applyMissionOverlaySettings(cfg) {
     // Merge incoming config and apply position / opacity / fonts / visibility.
     if (cfg != null) {
         for (let k in cfg) missionCfg[k] = cfg[k];
+        if (cfg.show_upcoming == null && cfg.show_next != null) missionCfg.show_upcoming = cfg.show_next;
     }
     let panel = document.getElementById('missioninfo');
 
@@ -646,6 +651,9 @@ function applyMissionOverlaySettings(cfg) {
     if (missionCfg.anchor_v === 'top') panel.style.top = missionCfg.offset_y + 'vh';
     else panel.style.bottom = missionCfg.offset_y + 'vh';
 
+    panel.style.width = (missionCfg.panel_width || 22) + 'vh';
+    panel.style.maxWidth = 'none';
+
     // Font sizes
     document.getElementById('missionnext').style.fontSize = missionCfg.font_next + 'vh';
     document.getElementById('missionname').style.fontSize = missionCfg.font_other + 'vh';
@@ -654,8 +662,11 @@ function applyMissionOverlaySettings(cfg) {
 
     // Section visibility
     document.getElementById('missionprev').style.display = missionCfg.show_previous ? 'block' : 'none';
-    document.getElementById('missionnext').style.display = missionCfg.show_next ? 'block' : 'none';
-    document.getElementById('missionupcoming').style.display = missionCfg.show_next ? 'block' : 'none';
+    document.getElementById('missionnext').style.display = 'block';
+    document.getElementById('missionupcoming').style.display = missionCfg.show_upcoming ? 'block' : 'none';
+
+    let bgOpacity = missionCfg.background_opacity != null ? missionCfg.background_opacity : 0.4;
+    panel.style.backgroundColor = 'rgba(0, 0, 0, ' + bgOpacity + ')';
 
     // Live opacity update while shown
     if (missionVisible) panel.style.opacity = missionCfg.opacity;
@@ -665,6 +676,8 @@ function missionStart(data) {
     if (data == null || data['events'] == null) return;
     missionEvents = data['events'].slice().sort(function (a, b) { return a.time - b.time; });
     missionMapName = data['map_name'] || '';
+    missionDifficulty = data['difficulty'] || 'Brutal';
+    missionTimingDifficulty = data['timing_difficulty'] || missionDifficulty;
     missionHasPatterns = missionEvents.some(function (e) { return e.pattern != null; });
     missionSyncedTime = data['displayTime'] || 0;
     missionSyncWall = Date.now();
@@ -676,7 +689,8 @@ function missionStart(data) {
     missionLastPrevStr = null;
 
     missionVisible = true;
-    applyMissionOverlaySettings(null);  // re-apply current position / fonts / visibility
+    if (data['mission_overlay'] != null) applyMissionOverlaySettings(data['mission_overlay']);
+    else applyMissionOverlaySettings(null);
     let panel = document.getElementById('missioninfo');
     panel.style.opacity = missionCfg.opacity;
 
@@ -719,6 +733,8 @@ function missionEnd() {
     }
     missionEvents = [];
     missionMapName = '';
+    missionDifficulty = 'Brutal';
+    missionTimingDifficulty = 'Brutal';
     missionVisible = false;
     document.getElementById('missioninfo').style.opacity = '0';
     console.log('Mission ended');
@@ -790,16 +806,23 @@ function renderMissionPanel() {
     let gameTime = missionCurrentTime();
     let upcoming = getUpcomingEvents(gameTime, missionEvents, missionUpcomingLimit);
 
-    // Map name (+ Brutal-timings note)
-    let nameStr = missionMapName + ' <span class="mission-detail">(Brutal)</span>';
+    // Map name (+ active difficulty; note when timings come from a harder fallback)
+    let diffLabel = missionDifficulty;
+    if (missionTimingDifficulty !== missionDifficulty) {
+        diffLabel = missionDifficulty + ' · ' + missionTimingDifficulty + ' times';
+    }
+    let nameStr = missionMapName + ' <span class="mission-detail">(' + diffLabel + ')</span>';
     if (nameStr !== missionLastNameStr) {
         document.getElementById('missionname').innerHTML = nameStr;
         missionLastNameStr = nameStr;
     }
 
     // PREVIOUS line
-    let prev = getPreviousEvent(gameTime, missionEvents);
-    let prevStr = prev ? '<span class="mission-label">PREV:</span> ' + missionEventText(prev, gameTime, true) : '';
+    let prevStr = '';
+    if (missionCfg.show_previous) {
+        let prev = getPreviousEvent(gameTime, missionEvents);
+        if (prev) prevStr = '<span class="mission-label">PREV:</span> ' + missionEventText(prev, gameTime, true);
+    }
     if (prevStr !== missionLastPrevStr) {
         document.getElementById('missionprev').innerHTML = prevStr;
         missionLastPrevStr = prevStr;
@@ -817,10 +840,12 @@ function renderMissionPanel() {
         missionLastNextStr = nextStr;
     }
 
-    // Following lines
+    // Following lines (upcoming events after NEXT)
     let upcomingStr = '';
-    for (let i = 1; i < upcoming.length; i++) {
-        upcomingStr += '<span class="mission-label">THEN:</span> ' + missionEventText(upcoming[i], gameTime) + '<br>';
+    if (missionCfg.show_upcoming) {
+        for (let i = 1; i < upcoming.length; i++) {
+            upcomingStr += '<span class="mission-label">THEN:</span> ' + missionEventText(upcoming[i], gameTime) + '<br>';
+        }
     }
     if (upcomingStr !== missionLastUpcomingStr) {
         document.getElementById('missionupcoming').innerHTML = upcomingStr;

@@ -200,11 +200,18 @@ def manual_extra(mission: str) -> list[dict]:
 
 
 def format_event(ev: dict) -> str:
-    parts = [f"'time': {ev['time']}", f"'kind': '{ev['kind']}'", f"'label': '{ev['label']}'"]
+    parts = [f"'label': '{ev['label']}'", f"'time': {ev['time']}"]
     for k in ('tech', 'strength', 'spawn', 'pattern', 'notes'):
         if k in ev:
             parts.append(f"'{k}': {ev[k]!r}" if k in ('spawn', 'pattern', 'notes', 'label') else f"'{k}': {ev[k]}")
     return '{' + ', '.join(parts) + '}'
+
+
+def format_section(events: list) -> None:
+    print("            'Brutal': [")
+    for e in events:
+        print(f"                {format_event(e)},")
+    print("            ],")
 
 
 def main():
@@ -223,11 +230,17 @@ def main():
                 continue
             seen.add(key)
             unique.append(e)
+
+        attack_waves = [e for e in unique if e.get('kind') != 'objective']
+        objectives = [e for e in unique if e.get('kind') == 'objective']
+
         print(f"\n    '{mission}': {{")
-        print("        'events': [")
-        for e in unique:
-            print(f"            {format_event(e)},")
-        print("        ]")
+        print("        'attack_waves': {")
+        format_section(attack_waves)
+        print("        },")
+        print("        'objectives': {")
+        format_section(objectives)
+        print("        }")
         print("    },")
 
 

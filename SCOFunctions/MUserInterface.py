@@ -13,7 +13,7 @@ import SCOFunctions.MainFunctions as MF
 from SCOFunctions.MainFunctions import show_overlay
 from SCOFunctions.MFilePath import innerPath, truePath
 from SCOFunctions.MLogging import Logger
-from SCOFunctions.MTheming import MColors
+from SCOFunctions.MTheming import MColors, TITLE_BAR_HEIGHT
 from SCOFunctions.SC2Dictionaries import CommanderMastery, prestige_names
 from SCOFunctions.Settings import Setting_manager as SM
 
@@ -1512,45 +1512,73 @@ class CustomKeySequenceEdit(QtWidgets.QKeySequenceEdit):
 
 
 class TitleBar(QtWidgets.QFrame):
-    """ Custom title bar used in the dark theme. Handles minimization, closing and dragging the window."""
+    """ Custom title bar for dark theme: dedicated row above the tab strip."""
+    HEIGHT = TITLE_BAR_HEIGHT
+
     def __init__(self, parent):
         super().__init__(parent)
-        self.setGeometry(QtCore.QRect(582, 0, 468, 24))
         self.moving = False
-        self.offset = None
+        self.drag_offset = None
         self.parent = parent
+        self.setStyleSheet('background-color: #373737;')
 
-        # New title
         self.new_title = QtWidgets.QLabel(self)
-        self.new_title.setGeometry(QtCore.QRect(100, 1, 200, 20))
-        self.new_title.setStyleSheet("color: white; font-weight: bold")
+        self.new_title.setStyleSheet('color: white; font-weight: bold')
+        self.new_title.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents, True)
 
-        # Minimize button
         self.minimize = QtWidgets.QToolButton(self)
-        self.minimize.setGeometry(QtCore.QRect(355, 2, 20, 20))
         self.minimize.setText('–')
         self.minimize.clicked.connect(parent.showMinimized)
 
-        # Maximize button
         self.close_button = QtWidgets.QToolButton(self)
-        self.close_button.setGeometry(QtCore.QRect(375, 2, 20, 20))
         self.close_button.setText('⨉')
         self.close_button.clicked.connect(parent.minimize_to_tray)
 
+    def activate(self):
+        self._layout_controls()
+        self.show()
+        self.raise_()
+
+    def _layout_controls(self):
+        width = self.parent.width()
+        self.setGeometry(0, 0, width, self.HEIGHT)
+        self.new_title.setGeometry(10, 2, width - 70, 20)
+        self.minimize.setGeometry(width - 45, 2, 20, 20)
+        self.close_button.setGeometry(width - 23, 2, 20, 20)
+
+    def resizeEvent(self, event):
+        self._layout_controls()
+        super().resizeEvent(event)
+
     def mousePressEvent(self, event):
         if self.parent.dark_mode_active and event.button() == QtCore.Qt.LeftButton:
+            child = self.childAt(event.pos())
+            if child in (self.minimize, self.close_button):
+                super().mousePressEvent(event)
+                return
             self.moving = True
-            self.offset = event.pos()
+            self.drag_offset = event.globalPos() - self.parent.frameGeometry().topLeft()
+        else:
+            super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
-        if self.parent.dark_mode_active and self.moving:
-            self.parent.move(event.globalPos() - self.offset - QtCore.QPoint(512, 0))
+        if self.moving and self.drag_offset is not None:
+            self.parent.move(event.globalPos() - self.drag_offset)
+        else:
+            super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == QtCore.Qt.LeftButton:
+            self.moving = False
+            self.drag_offset = None
+        super().mouseReleaseEvent(event)
 
 
 class CustomQTabWidget(QtWidgets.QTabWidget):
     """ Main app widget """
     def __init__(self, parent=None):
         super(CustomQTabWidget, self).__init__(parent)
+        self.setObjectName('MainTabWidget')
 
         # Tray
         self.tray_icon = QtWidgets.QSystemTrayIcon()

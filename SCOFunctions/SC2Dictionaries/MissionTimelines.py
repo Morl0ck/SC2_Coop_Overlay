@@ -14,18 +14,28 @@ difficulty and are given in in-game clock seconds (the value reported by the
 SC2 client API `displayTime`). They may differ on lower difficulties and can
 desync after balance patches or for randomized attack-wave patterns.
 
-Event schema (each event is a dict):
-    kind      str   - "attack_wave" | "objective"
+Each mission stores attack waves and objectives keyed by difficulty:
+
+    attack_waves  dict  - Casual / Normal / Hard / Brutal -> list of wave entries
+    objectives    dict  - Casual / Normal / Hard / Brutal -> list of objective entries
+
+Entry schema (each item in a difficulty list):
     label     str   - user-facing text
-    times     dict  - Casual / Normal / Hard / Brutal -> seconds or None (Brutal required in defaults)
-    tech      int   - (optional) enemy tech level
-    strength  int   - (optional) enemy strength level
-    spawn     str   - (optional) spawn point / attack direction (e.g. "Top Rail")
-    pattern   str   - (optional) "A" / "B" for split-pattern missions
+    time      int   - in-game clock seconds for this difficulty
+    tech      int   - (optional, attack waves) enemy tech level
+    strength  int   - (optional, attack waves) enemy strength level
+    spawn     str   - (optional, attack waves) spawn point / attack direction (e.g. "Top Rail")
+    pattern   str   - (optional, attack waves) "A" / "B" for split-pattern missions
     notes     str   - (optional) extra detail for the overlay
+
+Bundled defaults populate Brutal only (from starcraft2coop.com). Other difficulties
+start empty until filled in or imported from replays.
+
+At runtime ``get_events()`` reads the requested difficulty (falling back to Brutal per
+section when empty), merges attack waves + objectives, and adds ``kind`` for the overlay.
 """
 
-MISSION_TIMELINE_VERSION = "1.1"
+MISSION_TIMELINE_VERSION = "1.3"
 MISSION_TIMELINE_SOURCE = "starcraft2coop.com/missions (Aommaster), CC-BY-NC-SA-4.0"
 MISSION_TIMELINE_SOURCE_DATE = "2026-05-31"
 
@@ -315,16 +325,61 @@ _raw_mission_timelines = {
 }
 
 
-def _brutal_time(event):
-    return event['times']['Brutal']
+def _empty_by_difficulty():
+    return {d: [] for d in DIFFICULTIES}
+
+
+def _split_legacy_events(events):
+    waves, objectives = [], []
+    for event in events:
+        ev = dict(event)
+        kind = ev.pop('kind', 'attack_wave')
+        if kind == 'objective':
+            objectives.append(ev)
+        else:
+            waves.append(ev)
+    return waves, objectives
+
+
+def _list_to_by_difficulty(items):
+    """Convert flat list entries (legacy ``times`` map) to per-difficulty arrays."""
+    by_diff = _empty_by_difficulty()
+    for raw in items:
+        ev = dict(raw)
+        ev.pop('kind', None)
+        if 'times' in ev:
+            times = ev.pop('times')
+            base = {k: v for k, v in ev.items()}
+            for diff in DIFFICULTIES:
+                t = times.get(diff)
+                if t is not None:
+                    entry = dict(base)
+                    entry['time'] = int(t)
+                    by_diff[diff].append(entry)
+        elif 'time' in ev and ev['time'] is not None:
+            entry = dict(ev)
+            entry['time'] = int(entry['time'])
+            by_diff['Brutal'].append(entry)
+    for diff in DIFFICULTIES:
+        by_diff[diff].sort(key=lambda e: e['time'])
+    return by_diff
 
 
 def _build(raw):
-    """ Pre-sort each mission's events by Brutal time once at import. """
+    """Pre-sort bundled defaults into per-difficulty arrays (Brutal only)."""
     out = {}
     for mission, data in raw.items():
-        events = sorted(data['events'], key=_brutal_time)
-        out[mission] = {'events': events}
+        if isinstance(data.get('attack_waves'), dict):
+            waves = data.get('attack_waves', _empty_by_difficulty())
+            objectives = data.get('objectives', _empty_by_difficulty())
+        elif 'attack_waves' in data or 'objectives' in data:
+            waves = _list_to_by_difficulty(data.get('attack_waves', []))
+            objectives = _list_to_by_difficulty(data.get('objectives', []))
+        else:
+            wave_items, objective_items = _split_legacy_events(data.get('events', []))
+            waves = _list_to_by_difficulty(wave_items)
+            objectives = _list_to_by_difficulty(objective_items)
+        out[mission] = {'attack_waves': waves, 'objectives': objectives}
     return out
 
 

@@ -36,11 +36,14 @@ class CSettings:
                 'anchor_v': 'bottom',    # 'top' | 'bottom'
                 'offset_x': 2.0,         # distance from horizontal edge (vh)
                 'offset_y': 27.0,        # distance from vertical edge (vh)
-                'opacity': 0.9,          # panel opacity when shown (0-1)
+                'opacity': 0.9,          # overall panel opacity when shown (0-1)
+                'background_opacity': 0.4,  # mission panel background alpha (0-1)
                 'show_previous': True,
-                'show_next': True,
+                'show_upcoming': True,
                 'font_next': 1.55,       # font size for the NEXT line (vh)
                 'font_other': 1.2,       # font size for name / previous / upcoming (vh)
+                'panel_width': 22.0,     # mission panel width (vh)
+                'difficulty': 'auto',    # 'auto' | Casual | Normal | Hard | Brutal
             },
             'duration': 60,
             'monitor': 1,
