@@ -108,6 +108,8 @@ class MutationWidget(QtWidgets.QWidget):
 
 
 class MutationTab(QtWidgets.QWidget):
+    HEADING_HEIGHT = 23
+
     def __init__(self, TabWidget):
         super().__init__()
         self.p = self
@@ -168,7 +170,6 @@ class MutationTab(QtWidgets.QWidget):
 
         # Scroll
         self.scroll_area = QtWidgets.QScrollArea(self)
-        self.scroll_area.setGeometry(QtCore.QRect(0, 23, TabWidget.frameGeometry().width() - 5, TabWidget.frameGeometry().height() - 50))
         self.scroll_area.setFrameShape(QtWidgets.QFrame.NoFrame)
         self.scroll_area.setFrameShadow(QtWidgets.QFrame.Plain)
         self.scroll_area.setWidgetResizable(True)
@@ -188,6 +189,19 @@ class MutationTab(QtWidgets.QWidget):
         for mutation_name in weekly_mutations.keys():
             self.weekly_mutations[mutation_name] = MutationWidget(mutation_name)
             self.scroll_area_contentLayout.addWidget(self.weekly_mutations[mutation_name])
+
+        self.update_scroll_layout()
+
+    def update_scroll_layout(self):
+        if self.width() <= 0 or self.height() <= 0:
+            return
+        self.line.setGeometry(QtCore.QRect(5, self.HEADING_HEIGHT - 1, self.width() - 39, 1))
+        self.scroll_area.setGeometry(
+            QtCore.QRect(0, self.HEADING_HEIGHT, max(self.width() - 5, 0), max(self.height() - self.HEADING_HEIGHT, 0)))
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self.update_scroll_layout()
 
     def update_data(self, weekly_data):
         for mutation, widget in self.weekly_mutations.items():

@@ -73,6 +73,30 @@ def mission_tab_stylesheet() -> str:
     )
 
 
+def stats_tab_stylesheet() -> str:
+    card_bg = '#404040'
+    card_border = '#666'
+    text_primary = '#f0f0f0'
+    text_secondary = '#c8c8c8'
+    return (
+        f"QFrame#StatsFilterCard {{ background: {card_bg}; border: 1px solid {card_border}; border-radius: 4px; }}"
+        f"QLabel#StatsSectionTitle {{ color: {text_primary}; font-weight: 600; font-size: 12px; }}"
+        f"QLabel#StatsSummaryLabel {{ color: {text_secondary}; font-size: 11px; }}"
+        f"QLabel#StatsHintLabel {{ color: {text_secondary}; }}"
+        f"QTabWidget#StatsResultsTabs::pane {{ border: 1px solid {card_border}; background: {TAB_ACTIVE_BG};"
+        f" border-radius: 4px; top: -1px; }}"
+    )
+
+
+def refresh_scroll_tab_layouts(main):
+    """Re-fit scroll areas after the window gains the custom title bar."""
+    for tab in (main.TAB_Players, main.TAB_Games, main.TAB_Mutations):
+        if hasattr(tab, 'update_scroll_layout'):
+            tab.update_scroll_layout()
+    if hasattr(main, 'TAB_Stats') and hasattr(main.TAB_Stats, 'update_results_layout'):
+        main.TAB_Stats.update_results_layout()
+
+
 def set_dark_theme(main, app, tab, version):
     MColors.msg = "#ccc"
     MColors.msg_success = '#4f4'
@@ -123,6 +147,7 @@ def set_dark_theme(main, app, tab, version):
     tab.title_bar.show()
     tab.title_bar.activate()
     tab.setFixedSize(980, 610 + TITLE_BAR_HEIGHT)
+    refresh_scroll_tab_layouts(main)
 
     # Small tweaks
     main.TAB_Games.WD_RecentGamesHeading.setStyleSheet('background-color: #454545; font-weight: bold')
@@ -136,11 +161,10 @@ def set_dark_theme(main, app, tab, version):
                                                    'QToolTip {color:black; background-color: #ffffe1; font-weight: normal}')
 
     main.TAB_Randomizer.BT_RNG_Description.setEnabled(True)
-    main.TAB_Stats.LA_GamesFound.setEnabled(True)
-    main.TAB_Stats.LA_IdentifiedPlayers.setEnabled(True)
 
     tab.setStyleSheet(dark_tab_stylesheet()
                       + mission_tab_stylesheet()
+                      + stats_tab_stylesheet()
                       + "QScrollArea > QWidget > QWidget {background: #454545}"
                       "QPushButton {background: #454545}"
                       "QScrollArea QLineEdit {background: #333}"

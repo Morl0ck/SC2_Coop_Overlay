@@ -1748,14 +1748,14 @@ class SortingQLabel(QtWidgets.QLabel):
 
     def activate(self):
         self.reverse = not self.reverse
-        # Not the best way of doing it as a combination of AligmentFlags will not be equal
-        if super().alignment() == QtCore.Qt.AlignRight:
-            super().setText(('▼' if self.reverse else '▲') + self.value)
-        elif super().alignment() == QtCore.Qt.AlignLeft:
-            super().setText(self.value + ('▼' if self.reverse else '▲'))
+        alignment = super().alignment()
+        arrow = '▼' if self.reverse else '▲'
+        if alignment & QtCore.Qt.AlignRight and not alignment & QtCore.Qt.AlignLeft:
+            super().setText(arrow + self.value)
+        elif alignment & QtCore.Qt.AlignLeft and not alignment & QtCore.Qt.AlignRight:
+            super().setText(self.value + arrow)
         else:
-            super().setText('   ' + self.value + ('▼' if self.reverse else '▲'))
-        # Hmmm
+            super().setText('   ' + self.value + arrow)
         if self.p.p in SortingQLabel.active:
             if not SortingQLabel.active[self.p.p] == self:
                 SortingQLabel.active[self.p.p].deactivate()

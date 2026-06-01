@@ -9,6 +9,7 @@ logger = Logger('GT', Logger.levels.INFO)
 
 
 class GameTab(QtWidgets.QWidget):
+    HEADING_HEIGHT = 32
 
     def __init__(self, parent, TabWidget):
         super().__init__()
@@ -20,7 +21,6 @@ class GameTab(QtWidgets.QWidget):
 
         # Scroll
         self.SC_GamesScrollArea = QtWidgets.QScrollArea(self)
-        self.SC_GamesScrollArea.setGeometry(QtCore.QRect(0, 30, TabWidget.frameGeometry().width() - 5, TabWidget.frameGeometry().height() - 30))
         self.SC_GamesScrollArea.setFrameShape(QtWidgets.QFrame.NoFrame)
         self.SC_GamesScrollArea.setFrameShadow(QtWidgets.QFrame.Plain)
         self.SC_GamesScrollArea.setWidgetResizable(True)
@@ -106,6 +106,20 @@ class GameTab(QtWidgets.QWidget):
         # Finishing
         self.SC_GamesScrollAreaContent.setLayout(self.SC_GamesScrollAreaContentLayout)
         self.SC_GamesScrollArea.setWidget(self.SC_GamesScrollAreaContent)
+
+        self.update_scroll_layout()
+
+    def update_scroll_layout(self):
+        if self.width() <= 0 or self.height() <= 0:
+            return
+        self.WD_RecentGamesHeading.setGeometry(QtCore.QRect(0, 0, self.width(), self.HEADING_HEIGHT))
+        self.GameTabLine.setGeometry(QtCore.QRect(20, self.HEADING_HEIGHT - 2, self.width() - 59, 1))
+        self.SC_GamesScrollArea.setGeometry(
+            QtCore.QRect(0, self.HEADING_HEIGHT, max(self.width() - 5, 0), max(self.height() - self.HEADING_HEIGHT, 0)))
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self.update_scroll_layout()
 
     def scrollbar_moved(self):
         """ Adds new games if we scrolled down"""
