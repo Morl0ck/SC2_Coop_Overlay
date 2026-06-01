@@ -30,6 +30,18 @@ class CSettings:
             'start_minimized': False,
             'enable_logging': True,
             'show_player_winrates': True,
+            'show_mission_timeline': True,
+            'mission_overlay': {
+                'anchor_h': 'left',      # 'left' | 'right'
+                'anchor_v': 'bottom',    # 'top' | 'bottom'
+                'offset_x': 2.0,         # distance from horizontal edge (vh)
+                'offset_y': 27.0,        # distance from vertical edge (vh)
+                'opacity': 0.9,          # panel opacity when shown (0-1)
+                'show_previous': True,
+                'show_next': True,
+                'font_next': 1.55,       # font size for the NEXT line (vh)
+                'font_other': 1.2,       # font size for name / previous / upcoming (vh)
+            },
             'duration': 60,
             'monitor': 1,
             'force_hide_overlay': False,

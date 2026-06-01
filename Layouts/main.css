@@ -405,6 +405,64 @@ body {
     color: #F4F489;
 }
 
+#missioninfo {
+    position: absolute;
+    bottom: 27vh;
+    left: 2vh;
+    width: 22vh;
+    padding: 0.6vh 0.9vh;
+    background-color: rgba(0, 0, 0, 0.4);
+    border-radius: 0.5vh;
+    color: rgba(255, 255, 255, 0.95);
+    font-size: 1.35vh;
+    line-height: 1.35;
+    text-shadow: .1vh .1vh .1vh black;
+    opacity: 0;
+    transition: opacity 0.6s;
+}
+
+#missionname {
+    font-size: 1.55vh;
+    font-weight: bold;
+    margin-bottom: 0.25vh;
+}
+
+#missionprev {
+    font-size: 1.15vh;
+    opacity: 0.55;
+}
+
+#missionnext {
+    margin-bottom: 0.15vh;
+}
+
+#missionupcoming {
+    font-size: 1.2vh;
+    opacity: 0.8;
+}
+
+.mission-label {
+    color: #BFC8D2;
+}
+
+.mission-countdown {
+    color: #FFE670;
+    font-weight: bold;
+}
+
+.mission-wave {
+    color: #FF8A7A;
+}
+
+.mission-objective {
+    color: #7FD0FF;
+}
+
+.mission-detail {
+    color: #9AA4AE;
+    font-size: 0.85em;
+}
+
 #killbar>div>img {
     position: absolute;
     top: 0vh;

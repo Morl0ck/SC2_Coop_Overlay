@@ -53,6 +53,16 @@ class MainTab(QtWidgets.QWidget):
             "The number of games and winrate you had with your ally will be shown when a game starts.\nPlayer note will show as well if specified. Requires restart to enable."
         )
 
+        # Show mission timeline (live "what's next" overlay)
+        self.CH_ShowMissionTimeline = QtWidgets.QCheckBox(self)
+        self.CH_ShowMissionTimeline.setGeometry(QtCore.QRect(20, 7 * ch_distance, 230, 17))
+        self.CH_ShowMissionTimeline.setText("Show mission timeline")
+        self.CH_ShowMissionTimeline.setToolTip(
+            "During a co-op game, shows a live countdown to the next attack wave and mission objective.\n"
+            "Timings are for Brutal difficulty and are bundled offline.\n"
+            "Data from starcraft2coop.com (CC-BY-NC-SA-4.0, Aommaster).\n"
+            "Requires restart to enable.")
+
         # Mnimized when clicked
         self.CH_MinimizeToTray = QtWidgets.QCheckBox(self)
         self.CH_MinimizeToTray.setGeometry(QtCore.QRect(20, 3 * ch_distance, 300, 17))

@@ -22,6 +22,7 @@ from websockets.legacy.server import \
 import SCOFunctions.HelperFunctions as HF
 from SCOFunctions.HelperFunctions import get_hash
 from SCOFunctions.IdentifyMap import identify_map
+from SCOFunctions.MissionTracker import MissionTracker
 from SCOFunctions.MLogging import Logger
 from SCOFunctions.ReplayAnalysis import parse_and_analyse_replay
 from SCOFunctions.Settings import Setting_manager as SM
@@ -41,7 +42,8 @@ initMessage = {'initEvent': True,
                     'minerals' : False,
                     'vespene' : False,
                     'resources' : False
-                    }
+                    },
+               'mission_overlay': {}
                 }
 
 ReplayPosition = 0
@@ -69,6 +71,7 @@ def update_init_message() -> None:
     initMessage['colors'] = [SM.settings['color_player1'], SM.settings['color_player2'], SM.settings['color_amon'], SM.settings['color_mastery']]
     initMessage['duration'] = SM.settings['duration']
     initMessage['charts'] = SM.settings['charts']
+    initMessage['mission_overlay'] = SM.settings['mission_overlay']
 
 def sendEvent(event: Dict[str, Any], raw: bool = False) -> None:
     """ Send message to the overlay """
@@ -108,6 +111,18 @@ def sendEvent(event: Dict[str, Any], raw: bool = False) -> None:
         data = json.dumps(event)
         logger.info(f'Sending player event with JS: {event}')
         WEBPAGE.runJavaScript(f"showHidePlayerWinrate({data})")
+
+    elif event.get('missionStartEvent') is not None:
+        data = json.dumps(event)
+        logger.info(f"Sending mission start event: {event.get('map_name')}")
+        WEBPAGE.runJavaScript(f"missionStart({data});")
+
+    elif event.get('missionTimeEvent') is not None:
+        data = json.dumps(event)
+        WEBPAGE.runJavaScript(f"missionSyncTime({data});")
+
+    elif event.get('missionEndEvent') is not None:
+        WEBPAGE.runJavaScript("missionEnd();")
 
 
 def resend_init_message() -> None:
@@ -533,115 +548,162 @@ def wait_for_wake() -> Optional[float]:
             return diff - 10
 
 
-def check_for_new_game(progress_callback: QtCore.pyqtSignal) -> None:
+class WinrateState:
+    """ Holds the interlocked state vars the winrate detector relies on.
+
+    These exist because the localhost API briefly reports the *previous* game
+    right after a new replay lands; reordering/dropping them reintroduces
+    duplicate winrate popups. Do not change this logic - only its location.
+    """
+    def __init__(self) -> None:
+        self.last_game_time = None
+        self.last_replay_amount = 0
+        self.last_replay_amount_flowing = len(AllReplays)  # Identifies when a replay has been parsed
+        self.last_replay_time = 0  # Time when we got the last replay parsed
+
+
+def winrate_path(resp: Dict[str, Any], st: 'WinrateState', progress_callback: QtCore.pyqtSignal) -> None:
+    """ Player-winrate detection. This is the original `check_for_new_game` body,
+    relocated verbatim behind its own state object. It is gated on replay-file
+    state and MUST NOT be merged with the mission-tracking path. """
     global most_recent_playerdata
-    """ Thread checking for a new game and sending signals to the overlay with player winrate stats"""
+
+    # Skip if winrate data not showing OR no new replay analysed, meaning it's the same game (excluding the first game)
+    if len(player_winrate_data) == 0 or len(AllReplays) == st.last_replay_amount:
+        return
+
+    # When we get a new replay, mark the time
+    if len(AllReplays) > st.last_replay_amount_flowing:
+        st.last_replay_amount_flowing = len(AllReplays)
+        st.last_replay_time = time.time()
+
+    players = resp.get('players', list())
+
+    # Don't show in if all players are type user - versus game
+    all_users = True
+    for player in players:
+        if player['type'] != 'user':
+            all_users = False
+
+    if all_users:
+        return
+
+    # Check if we have players in, and it's not a replay
+    if len(players) <= 2 or resp.get('isReplay', True):
+        return
+
+    # If the last time is the same, then we are in menus. Otherwise in-game.
+    if st.last_game_time is None or resp['displayTime'] == 0:
+        st.last_game_time = resp['displayTime']
+        return
+
+    if st.last_game_time == resp['displayTime']:
+        logger.debug(f"The same time (curent: {resp['displayTime']}) (last: {st.last_game_time}) skipping...")
+        return
+
+    st.last_game_time = resp['displayTime']
+
+    # Don't show too soon after a replay has been parsed, false positive.
+    if time.time() - st.last_replay_time < 15:
+        logger.debug('Replay added recently, wont show player winrates right now')
+        return
+
+    # Mark this game so it won't be checked it again
+    st.last_replay_amount = len(AllReplays)
+
+    # Add the first player name that's not the main player. This could be expanded to any number of players.
+    if len(PLAYER_NAMES) > 0:
+        test_names_against = [p.lower() for p in PLAYER_NAMES]
+    elif len(SM.settings['main_names']) > 0:
+        test_names_against = [p.lower() for p in SM.settings['main_names']]
+    else:
+        logger.error('No main names to test against')
+        return
+
+    # Find ally player and get your current player position
+    player_names = list()
+    player_position = 1
+    for player in players:
+        if player['id'] in {1, 2} and not player['name'].lower() in test_names_against and player['type'] != 'computer':
+            player_names.append(player['name'])
+            player_position = 2 if player['id'] == 1 else 1
+            break
+
+    # If we have players to show
+    if player_names:
+        most_recent_playerdata = get_player_data(player_names)
+        sendEvent({'playerEvent': True, 'data': most_recent_playerdata})
+
+    # Identify map
+    try:
+        map_found = identify_map(players)
+        if map_found:
+            progress_callback.emit([map_found, str(player_position)])
+        else:
+            logger.error(f"Map not identified: {players}")
+    except Exception:
+        logger.error(traceback.format_exc())
+
+
+def poll_interval(resp: Optional[Dict[str, Any]]) -> float:
+    """ Adaptive poll cadence. Replaces the old flat 0.5s loop:
+        - 10s when SC2 isn't running / connection issues
+        - 3s in menus (detect game start without busy-wait)
+        - 5s in an active co-op game (only needed to sync clock + detect end)
+    """
+    if resp is None:
+        return 10
+    display_time = resp.get('displayTime', 0)
+    in_game = (display_time and display_time > 0 and not resp.get('isReplay', True) and len(resp.get('players', list())) > 2)
+    return 5 if in_game else 3
+
+
+def game_state_poller(progress_callback: QtCore.pyqtSignal) -> None:
+    """ Single shared poller for everything that needs the live `:6119/game` state.
+
+    Fetches `/game` once per tick, then fans out to two independent paths that
+    each own their gating/state: player-winrate detection and mission tracking.
+    Settings are re-read every tick so a feature can be effectively on/off
+    without a thread-start guard (the thread itself is created once - see SCO.py).
+    """
     # Wait a bit for the replay initialization to complete
     time.sleep(4)
-    """
-    To identify new game, this is checking for the ingame display time to change. Plus isReplay has to be False.
-    To identify unique new game, we want the length of all replays to change first => new game.
-    And we don't want to show it right after all replays changed, since that's a false positive and ingame time actually didn't change.
 
-    """
-    last_game_time = None
-    last_replay_amount = 0
-    last_replay_amount_flowing = len(AllReplays)  # This helps identify when a replay has been parsed
-    last_replay_time = 0  # Time when we got the last replay parsed
+    winrate_state = WinrateState()
+    tracker = MissionTracker(send_event=sendEvent)
 
     while True:
-        time.sleep(0.5)
-
         if APP_CLOSING:
             break
 
-        # Skip if winrate data not showing OR no new replay analysed, meaning it's the same game (excluding the first game)
-        if len(player_winrate_data) == 0 or len(AllReplays) == last_replay_amount:
-            continue
-
-        # When we get a new replay, mark the time
-        if len(AllReplays) > last_replay_amount_flowing:
-            last_replay_amount_flowing = len(AllReplays)
-            last_replay_time = time.time()
-
+        # --- single shared fetch ---
+        resp = None
+        connection_error = False
         try:
-            # Request player data from the game
-            resp = session.get('http://localhost:6119/game', timeout=6).json()
-            players = resp.get('players', list())
-
-            # Don't show in if all players are type user - versus game
-            all_users = True
-            for player in players:
-                if player['type'] != 'user':
-                    all_users = False
-
-            if all_users:
-                continue
-
-            # Check if we have players in, and it's not a replay
-            if len(players) <= 2 or resp.get('isReplay', True):
-                continue
-
-            # If the last time is the same, then we are in menus. Otherwise in-game.
-            if last_game_time is None or resp['displayTime'] == 0:
-                last_game_time = resp['displayTime']
-                continue
-
-            if last_game_time == resp['displayTime']:
-                logger.debug(f"The same time (curent: {resp['displayTime']}) (last: {last_game_time}) skipping...")
-                continue
-
-            last_game_time = resp['displayTime']
-
-            # Don't show too soon after a replay has been parsed, false positive.
-            if time.time() - last_replay_time < 15:
-                logger.debug('Replay added recently, wont show player winrates right now')
-                continue
-
-            # Mark this game so it won't be checked it again
-            last_replay_amount = len(AllReplays)
-
-            # Add the first player name that's not the main player. This could be expanded to any number of players.
-            if len(PLAYER_NAMES) > 0:
-                test_names_against = [p.lower() for p in PLAYER_NAMES]
-            elif len(SM.settings['main_names']) > 0:
-                test_names_against = [p.lower() for p in SM.settings['main_names']]
-            else:
-                logger.error('No main names to test against')
-                continue
-
-            # Find ally player and get your current player position
-            player_names = list()
-            player_position = 1
-            for player in players:
-                if player['id'] in {1, 2} and not player['name'].lower() in test_names_against and player['type'] != 'computer':
-                    player_names.append(player['name'])
-                    player_position = 2 if player['id'] == 1 else 1
-                    break
-
-            # If we have players to show
-            if player_names:
-                most_recent_playerdata = get_player_data(player_names)
-                sendEvent({'playerEvent': True, 'data': most_recent_playerdata})
-
-            # Identify map
-            try:
-                map_found = identify_map(players)
-                if map_found:
-                    progress_callback.emit([map_found, str(player_position)])
-                else:
-                    logger.error(f"Map not identified: {players}")
-            except Exception:
-                logger.error(traceback.format_exc())
-
+            timeout = 2 if tracker.idle else 5  # short timeout when idle/menus
+            resp = session.get('http://localhost:6119/game', timeout=timeout).json()
         except requests.exceptions.ConnectionError:
-            logger.debug(f'SC2 request failed. Game not running.')
-
+            connection_error = True
+            logger.debug('SC2 request failed. Game not running.')
         except json.decoder.JSONDecodeError:
             logger.info('SC2 request json decoding failed (SC2 is starting or closing)')
-
         except requests.exceptions.ReadTimeout:
             logger.info('SC2 request timeout')
-
         except Exception:
             logger.info(traceback.format_exc())
+
+        # --- fan out (each path applies its own gating; no shared continues) ---
+        if resp is not None:
+            if SM.settings['show_player_winrates']:
+                winrate_path(resp, winrate_state, progress_callback)
+            if SM.settings.get('show_mission_timeline', True):
+                tracker.update(resp)
+        elif connection_error and SM.settings.get('show_mission_timeline', True):
+            tracker.on_disconnect()
+
+        # --- adaptive sleep (replaces flat 0.5s) ---
+        time.sleep(poll_interval(resp))
+
+
+# Backwards-compatible alias: the shared poller still serves winrate detection.
+check_for_new_game = game_state_poller

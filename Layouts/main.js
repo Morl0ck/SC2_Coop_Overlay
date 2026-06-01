@@ -96,6 +96,12 @@ function connect_to_socket() {
             initColorsDuration(data)
         } else if (data['playerEvent'] != null) {
             showHidePlayerWinrate(data)
+        } else if (data['missionStartEvent'] != null) {
+            missionStart(data)
+        } else if (data['missionTimeEvent'] != null) {
+            missionSyncTime(data)
+        } else if (data['missionEndEvent'] != null) {
+            missionEnd()
         } else {
             console.log('unidentified message')
         }
@@ -175,6 +181,7 @@ function initColorsDuration(data) {
     DURATION = data['duration'];
     show_charts = data['charts']
     UpdateChartsVisibility();
+    if (data['mission_overlay'] != null) applyMissionOverlaySettings(data['mission_overlay']);
     console.log('Received init data. Duration: ' + DURATION + 's. Show charts: ' + JSON.stringify(show_charts, null, 2));
 }
 
@@ -590,4 +597,233 @@ function fillunits(el, dat, commander, color, total_kills = null) {
 
     if (idx == 0) text = '<span class="unitkills"></span>';
     document.getElementById(el).innerHTML = text;
+}
+
+
+// ---------------------------------------------------------------------------
+// Mission "what's next" overlay
+//
+// Python sends sparse events (start / time-sync / end). The countdown itself
+// runs locally here so we never depend on per-second traffic from Python.
+// ---------------------------------------------------------------------------
+var missionEvents = [];          // pre-sorted list of {time, kind, label, ...}
+var missionMapName = '';
+var missionHasPatterns = false;
+var missionSyncedTime = 0;       // last displayTime received from SC2 (game-clock seconds)
+var missionSyncWall = 0;         // Date.now() when missionSyncedTime was set
+var missionSpeed = 1.4;          // game-clock seconds per wall second (Faster = ~1.4)
+var missionPaused = false;
+var missionInterval = null;
+var missionLastNextStr = null;
+var missionLastUpcomingStr = null;
+var missionLastNameStr = null;
+var missionLastPrevStr = null;
+var missionUpcomingLimit = 3;
+var missionVisible = false;
+var missionCfg = {
+    anchor_h: 'left', anchor_v: 'bottom',
+    offset_x: 2, offset_y: 27,
+    opacity: 0.9,
+    show_previous: true, show_next: true,
+    font_next: 1.55, font_other: 1.2
+};
+
+
+function applyMissionOverlaySettings(cfg) {
+    // Merge incoming config and apply position / opacity / fonts / visibility.
+    if (cfg != null) {
+        for (let k in cfg) missionCfg[k] = cfg[k];
+    }
+    let panel = document.getElementById('missioninfo');
+
+    // Position (anchor to a corner with an offset, in vh)
+    panel.style.top = 'auto';
+    panel.style.bottom = 'auto';
+    panel.style.left = 'auto';
+    panel.style.right = 'auto';
+    if (missionCfg.anchor_h === 'right') panel.style.right = missionCfg.offset_x + 'vh';
+    else panel.style.left = missionCfg.offset_x + 'vh';
+    if (missionCfg.anchor_v === 'top') panel.style.top = missionCfg.offset_y + 'vh';
+    else panel.style.bottom = missionCfg.offset_y + 'vh';
+
+    // Font sizes
+    document.getElementById('missionnext').style.fontSize = missionCfg.font_next + 'vh';
+    document.getElementById('missionname').style.fontSize = missionCfg.font_other + 'vh';
+    document.getElementById('missionprev').style.fontSize = missionCfg.font_other + 'vh';
+    document.getElementById('missionupcoming').style.fontSize = missionCfg.font_other + 'vh';
+
+    // Section visibility
+    document.getElementById('missionprev').style.display = missionCfg.show_previous ? 'block' : 'none';
+    document.getElementById('missionnext').style.display = missionCfg.show_next ? 'block' : 'none';
+    document.getElementById('missionupcoming').style.display = missionCfg.show_next ? 'block' : 'none';
+
+    // Live opacity update while shown
+    if (missionVisible) panel.style.opacity = missionCfg.opacity;
+}
+
+function missionStart(data) {
+    if (data == null || data['events'] == null) return;
+    missionEvents = data['events'].slice().sort(function (a, b) { return a.time - b.time; });
+    missionMapName = data['map_name'] || '';
+    missionHasPatterns = missionEvents.some(function (e) { return e.pattern != null; });
+    missionSyncedTime = data['displayTime'] || 0;
+    missionSyncWall = Date.now();
+    missionSpeed = 1.4;
+    missionPaused = false;
+    missionLastNextStr = null;
+    missionLastUpcomingStr = null;
+    missionLastNameStr = null;
+    missionLastPrevStr = null;
+
+    missionVisible = true;
+    applyMissionOverlaySettings(null);  // re-apply current position / fonts / visibility
+    let panel = document.getElementById('missioninfo');
+    panel.style.opacity = missionCfg.opacity;
+
+    renderMissionPanel();
+    if (missionInterval == null) {
+        missionInterval = setInterval(renderMissionPanel, 1000);
+    }
+    console.log('Mission started: ' + missionMapName);
+}
+
+
+function missionSyncTime(data) {
+    if (data == null || data['displayTime'] == null) return;
+    let newTime = data['displayTime'];
+    let now = Date.now();
+    let wallDelta = (now - missionSyncWall) / 1000;
+
+    // Same clock value across two syncs => the game is paused.
+    if (newTime === missionSyncedTime) {
+        missionPaused = true;
+    } else {
+        // Estimate the game-clock speed from the observed delta (Faster ~1.4),
+        // clamped to a sane range so a stray sample can't break the countdown.
+        if (wallDelta > 0.5) {
+            let observed = (newTime - missionSyncedTime) / wallDelta;
+            if (observed > 0.5 && observed < 3) missionSpeed = observed;
+        }
+        missionPaused = false;
+    }
+    missionSyncedTime = newTime;
+    missionSyncWall = now;
+    renderMissionPanel();
+}
+
+
+function missionEnd() {
+    if (missionInterval != null) {
+        clearInterval(missionInterval);
+        missionInterval = null;
+    }
+    missionEvents = [];
+    missionMapName = '';
+    missionVisible = false;
+    document.getElementById('missioninfo').style.opacity = '0';
+    console.log('Mission ended');
+}
+
+
+function missionCurrentTime() {
+    // Interpolate the in-game clock between syncs.
+    if (missionPaused) return missionSyncedTime;
+    let wallDelta = (Date.now() - missionSyncWall) / 1000;
+    return missionSyncedTime + wallDelta * missionSpeed;
+}
+
+
+function missionFormatCountdown(seconds) {
+    if (seconds < 0) seconds = 0;
+    seconds = Math.round(seconds);
+    let sec = seconds % 60;
+    let min = (seconds - sec) / 60;
+    if (sec < 10) sec = '0' + sec;
+    return min + ':' + sec;
+}
+
+
+function getUpcomingEvents(gameTime, events, limit) {
+    // Future events only, already time-sorted. Pattern A/B entries are both
+    // kept so the panel shows every possible "next" until the game resolves it.
+    let upcoming = [];
+    for (let i = 0; i < events.length; i++) {
+        if (events[i].time > gameTime) {
+            upcoming.push(events[i]);
+            if (upcoming.length >= limit) break;
+        }
+    }
+    return upcoming;
+}
+
+
+function getPreviousEvent(gameTime, events) {
+    // Most recent event that has already happened (events are time-sorted).
+    let prev = null;
+    for (let i = 0; i < events.length; i++) {
+        if (events[i].time <= gameTime) prev = events[i];
+        else break;
+    }
+    return prev;
+}
+
+
+function missionEventText(ev, gameTime, past) {
+    let delta = past ? (gameTime - ev.time) : (ev.time - gameTime);
+    let timeStr = missionFormatCountdown(delta) + (past ? ' ago' : '');
+    let cls = ev.kind === 'attack_wave' ? 'mission-wave' : 'mission-objective';
+    let label = ev.label || (ev.kind === 'attack_wave' ? 'Attack wave' : 'Event');
+    if (ev.pattern != null) label += ' [' + ev.pattern + ']';
+
+    let detail = '';
+    let parts = [];
+    if (ev.tech != null && ev.strength != null) parts.push('T' + ev.tech + '/S' + ev.strength);
+    if (ev.spawn != null) parts.push(ev.spawn);
+    if (parts.length > 0) detail = ' <span class="mission-detail">(' + parts.join(', ') + ')</span>';
+
+    return '<span class="' + cls + '">' + label + '</span> <span class="mission-countdown">' + timeStr + '</span>' + detail;
+}
+
+
+function renderMissionPanel() {
+    if (missionEvents.length === 0) return;
+    let gameTime = missionCurrentTime();
+    let upcoming = getUpcomingEvents(gameTime, missionEvents, missionUpcomingLimit);
+
+    // Map name (+ Brutal-timings note)
+    let nameStr = missionMapName + ' <span class="mission-detail">(Brutal)</span>';
+    if (nameStr !== missionLastNameStr) {
+        document.getElementById('missionname').innerHTML = nameStr;
+        missionLastNameStr = nameStr;
+    }
+
+    // PREVIOUS line
+    let prev = getPreviousEvent(gameTime, missionEvents);
+    let prevStr = prev ? '<span class="mission-label">PREV:</span> ' + missionEventText(prev, gameTime, true) : '';
+    if (prevStr !== missionLastPrevStr) {
+        document.getElementById('missionprev').innerHTML = prevStr;
+        missionLastPrevStr = prevStr;
+    }
+
+    // NEXT line
+    let nextStr;
+    if (upcoming.length > 0) {
+        nextStr = '<span class="mission-label">NEXT:</span> ' + missionEventText(upcoming[0], gameTime);
+    } else {
+        nextStr = '<span class="mission-label">No further events</span>';
+    }
+    if (nextStr !== missionLastNextStr) {
+        document.getElementById('missionnext').innerHTML = nextStr;
+        missionLastNextStr = nextStr;
+    }
+
+    // Following lines
+    let upcomingStr = '';
+    for (let i = 1; i < upcoming.length; i++) {
+        upcomingStr += '<span class="mission-label">THEN:</span> ' + missionEventText(upcoming[i], gameTime) + '<br>';
+    }
+    if (upcomingStr !== missionLastUpcomingStr) {
+        document.getElementById('missionupcoming').innerHTML = upcomingStr;
+        missionLastUpcomingStr = upcomingStr;
+    }
 }
