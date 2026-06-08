@@ -941,7 +941,10 @@ function renderBuildOrderPanel() {
             step.textContent = steps[i];
             fragment.appendChild(step);
         }
-        container.replaceChildren(fragment);
+        // Note: avoid Element.replaceChildren() - the embedded Qt WebEngine
+        // (older Chromium) doesn't implement it, which silently broke rendering.
+        while (container.firstChild) container.removeChild(container.firstChild);
+        container.appendChild(fragment);
         buildOrderLastHtml = renderKey;
     }
 }
