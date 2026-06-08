@@ -17,10 +17,11 @@ nuitka_cmd = [
     sys.executable,
     '-m',
     'nuitka',
+    '--assume-yes-for-downloads',
     '--plugin-enable=pyqt5',
     '--include-package=mouse',
     '--standalone',
-    '--windows-disable-console',
+    '--windows-console-mode=disable',
     '--windows-icon-from-ico=src/OverlayIcon.ico',
     '--include-data-dir=src=src',
     '--include-data-dir=Layouts=Layouts',
@@ -81,7 +82,7 @@ for root, directories, files in os.walk(dist_dir):
 print('Compressing files...')
 with ZipFile(file_name, 'w', compression=ZIP_DEFLATED) as zip:
     for file in to_zip:
-        zip.write(file, file[len('SCO.dist' + os.sep):])
+        zip.write(file, os.path.relpath(file, dist_dir))
 
 # Cleanup
 for item in ('SCO.build', 'SCO.dist', 'dist'):
