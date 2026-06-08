@@ -8,3 +8,4 @@ from .RngTab import RngTab
 from .TwitchTab import TwitchTab
 from .MutationTab import MutationTab
 from .MissionTab import MissionTab
+from .BuildOrderTab import BuildOrderTab

@@ -48,8 +48,11 @@ from SCOFunctions.MLogging import Logger, catch_exceptions
 from SCOFunctions.MSystemInfo import SystemInfo
 from SCOFunctions.MTheming import MColors, set_dark_theme
 from SCOFunctions.MTwitchBot import TwitchBot
+from SCOFunctions.BuildOrderStore import BOS
+from SCOFunctions.CommanderOCR import commander_display_name
+from SCOFunctions import CommanderSelection as CS
 from SCOFunctions.MissionTimelineStore import MTS, empty_mission_data, mmss_to_seconds, seconds_to_mmss
-from SCOFunctions.SC2Dictionaries import MISSION_TIMELINE_VERSION, DIFFICULTIES
+from SCOFunctions.SC2Dictionaries import MISSION_TIMELINE_VERSION, BUILD_ORDER_VERSION, DIFFICULTIES
 from SCOFunctions.Settings import Setting_manager as SM
 
 logger = Logger('SCO', Logger.levels.INFO)
@@ -116,6 +119,7 @@ class UI_TabWidget(object):
         self.signal_manager.showHidePerfOverlay.connect(self.show_hide_performance_overlay)
         self.write_permissions = True
         self.mission_overlay_preview = False
+        self.build_order_overlay_preview = False
 
         # Tabs
         self.TAB_Main = Tabs.MainTab(self, APPVERSION)
@@ -128,6 +132,7 @@ class UI_TabWidget(object):
         self.TAB_Links = Tabs.LinkTab(self)
         self.TAB_Mutations = Tabs.MutationTab(TabWidget)
         self.TAB_Mission = Tabs.MissionTab(self)
+        self.TAB_BuildOrder = Tabs.BuildOrderTab(self)
 
         # Add tabs to the widget
         TabWidget.addTab(self.TAB_Main, "Settings")
@@ -139,6 +144,7 @@ class UI_TabWidget(object):
         TabWidget.addTab(self.TAB_TwitchBot, "Twitch")
         TabWidget.addTab(self.TAB_Resources, "Performance")
         TabWidget.addTab(self.TAB_Mission, "Mission Overlay")
+        TabWidget.addTab(self.TAB_BuildOrder, "Build Order")
         TabWidget.addTab(self.TAB_Links, "Links")
 
         QtCore.QMetaObject.connectSlotsByName(TabWidget)
@@ -362,6 +368,7 @@ class UI_TabWidget(object):
         self.TAB_Main.CH_EnableLogging.setChecked(SM.settings['enable_logging'])
         self.TAB_Main.CH_ShowPlayerWinrates.setChecked(SM.settings['show_player_winrates'])
         self.TAB_Main.CH_ShowMissionTimeline.setChecked(SM.settings['show_mission_timeline'])
+        self.TAB_Main.CH_ShowBuildOrders.setChecked(SM.settings.get('show_build_orders', True))
 
         mo = SM.settings['mission_overlay']
         self.TAB_Mission.CB_AnchorH.setCurrentText('Right' if mo['anchor_h'] == 'right' else 'Left')
@@ -383,6 +390,28 @@ class UI_TabWidget(object):
             self.TAB_Mission.CB_OverlayDifficulty.setCurrentIndex(diff_idx)
         self.TAB_Mission.CB_OverlayDifficulty.blockSignals(False)
         self.populate_mission_timeline_editor()
+
+        bo = SM.settings.get('build_order_overlay', {})
+        self.TAB_BuildOrder.CB_AnchorH.setCurrentText('Right' if bo.get('anchor_h') == 'right' else 'Left')
+        self.TAB_BuildOrder.CB_AnchorV.setCurrentText('Top' if bo.get('anchor_v') == 'top' else 'Bottom')
+        self.TAB_BuildOrder.SP_OffsetX.setValue(bo.get('offset_x', 2.0))
+        self.TAB_BuildOrder.SP_OffsetY.setValue(bo.get('offset_y', 2.0))
+        self.TAB_BuildOrder.SP_Opacity.setValue(bo.get('opacity', 0.9))
+        self.TAB_BuildOrder.SP_BackgroundOpacity.setValue(bo.get('background_opacity', 0.4))
+        self.TAB_BuildOrder.SP_PanelWidth.setValue(bo.get('panel_width', 22.0))
+        self.TAB_BuildOrder.SP_FontTitle.setValue(bo.get('font_title', 1.55))
+        self.TAB_BuildOrder.SP_FontStep.setValue(bo.get('font_step', 1.2))
+        self.TAB_BuildOrder.SP_MaxSteps.setValue(int(bo.get('max_steps', 0)))
+        self.TAB_BuildOrder.CH_FullWidth.setChecked(SM.settings['width'] >= 0.999)
+        build_cfg = SM.settings.get('build_orders', {})
+        self.TAB_BuildOrder.SP_DisplayMinutes.setValue(float(build_cfg.get('display_minutes', 5.0)))
+        self.TAB_BuildOrder.CH_OcrEnabled.setChecked(build_cfg.get('ocr_enabled', True))
+        default_commander = build_cfg.get('default_commander', 'Raynor')
+        idx = self.TAB_BuildOrder.CB_DefaultCommander.findData(default_commander)
+        if idx >= 0:
+            self.TAB_BuildOrder.CB_DefaultCommander.setCurrentIndex(idx)
+        self.load_build_order_editor()
+
         self.TAB_Main.CH_ForceHideOverlay.setChecked(SM.settings['force_hide_overlay'])
         # self.TAB_Main.CH_ShowCharts.setChecked(SM.settings['show_charts'])
         self.TAB_Main.CH_DarkTheme.setChecked(SM.settings['dark_theme'])
@@ -447,13 +476,22 @@ class UI_TabWidget(object):
         SM.settings['enable_logging'] = self.TAB_Main.CH_EnableLogging.isChecked()
         SM.settings['show_player_winrates'] = self.TAB_Main.CH_ShowPlayerWinrates.isChecked()
         SM.settings['show_mission_timeline'] = self.TAB_Main.CH_ShowMissionTimeline.isChecked()
+        SM.settings['show_build_orders'] = self.TAB_Main.CH_ShowBuildOrders.isChecked()
 
         # Assign a fresh dict (not in-place mutation) so the shallow-copied
         # previous_settings keeps the old values and change detection works.
         SM.settings['mission_overlay'] = self._mission_overlay_from_ui()
-        # Full-width overlay window (needed for left-side mission panel placement).
+        SM.settings['build_order_overlay'] = self._build_order_overlay_from_ui()
+        build_orders = self._build_orders_from_ui()
+        commander = self.TAB_BuildOrder.current_commander()
+        build_orders.setdefault('use_custom', {})[commander] = self.TAB_BuildOrder.CH_UseCustom.isChecked()
+        build_orders.setdefault('custom', {})[commander] = self.TAB_BuildOrder.get_custom_text()
+        SM.settings['build_orders'] = build_orders
+        # Full-width overlay window (needed for left-side panel placement).
         # 1px short of full to avoid the exclusive-fullscreen black-screen issue.
-        SM.settings['width'] = 1.0 if self.TAB_Mission.CH_FullWidth.isChecked() else 0.7
+        SM.settings['width'] = 1.0 if (
+            self.TAB_Mission.CH_FullWidth.isChecked() or self.TAB_BuildOrder.CH_FullWidth.isChecked()
+        ) else 0.7
         SM.settings['force_hide_overlay'] = self.TAB_Main.CH_ForceHideOverlay.isChecked()
         # SM.settings['show_charts'] = self.TAB_Main.CH_ShowCharts.isChecked()
         SM.settings['dark_theme'] = self.TAB_Main.CH_DarkTheme.isChecked()
@@ -551,7 +589,7 @@ class UI_TabWidget(object):
                 self.TAB_Main.CH_StartWithWindows.setChecked(SM.settings['start_with_windows'])
 
         # Resend init message if duration has changed. Colors are handle in color picker.
-        if 'duration' in changed_keys or 'mission_overlay' in changed_keys:
+        if 'duration' in changed_keys or 'mission_overlay' in changed_keys or 'build_order_overlay' in changed_keys:
             MF.resend_init_message()
 
         # Monitor / overlay-width update
@@ -758,6 +796,11 @@ class UI_TabWidget(object):
 
         # Pass current settings
         MF.update_init_message()
+
+        # Start click-triggered commander/difficulty detection on the co-op lobby
+        bo_ocr = SM.settings.get('show_build_orders', True) and SM.settings.get('build_orders', {}).get('ocr_enabled', True)
+        if bo_ocr or SM.settings.get('show_mission_timeline', True):
+            CS.start_watcher()
 
         # Init randomization
         self.TAB_Randomizer.randomize_commander()
@@ -983,7 +1026,7 @@ class UI_TabWidget(object):
 
         # Start the shared game-state poller when at least one live-game feature
         # is enabled (player winrates or mission timeline). One thread, not two.
-        if SM.settings['show_player_winrates'] or SM.settings.get('show_mission_timeline', True):
+        if SM.settings['show_player_winrates'] or SM.settings.get('show_mission_timeline', True) or SM.settings.get('show_build_orders', True):
             thread_check_for_newgame = MUI.Worker(MF.game_state_poller, progress_callback=True)
             thread_check_for_newgame.signals.progress.connect(self.map_identified)
             self.threadpool.start(thread_check_for_newgame)
@@ -1468,6 +1511,108 @@ class UI_TabWidget(object):
         else:
             self._end_mission_overlay_preview()
 
+    def _build_order_overlay_from_ui(self) -> dict:
+        return {
+            'anchor_h': 'right' if self.TAB_BuildOrder.CB_AnchorH.currentText() == 'Right' else 'left',
+            'anchor_v': 'top' if self.TAB_BuildOrder.CB_AnchorV.currentText() == 'Top' else 'bottom',
+            'offset_x': self.TAB_BuildOrder.SP_OffsetX.value(),
+            'offset_y': self.TAB_BuildOrder.SP_OffsetY.value(),
+            'opacity': self.TAB_BuildOrder.SP_Opacity.value(),
+            'background_opacity': self.TAB_BuildOrder.SP_BackgroundOpacity.value(),
+            'panel_width': self.TAB_BuildOrder.SP_PanelWidth.value(),
+            'font_title': self.TAB_BuildOrder.SP_FontTitle.value(),
+            'font_step': self.TAB_BuildOrder.SP_FontStep.value(),
+            'max_steps': self.TAB_BuildOrder.SP_MaxSteps.value(),
+        }
+
+    def _build_orders_from_ui(self) -> dict:
+        previous = SM.settings.get('build_orders', {})
+        return {
+            'default_commander': self.TAB_BuildOrder.CB_DefaultCommander.currentData() or 'Raynor',
+            'display_minutes': self.TAB_BuildOrder.SP_DisplayMinutes.value(),
+            'ocr_enabled': self.TAB_BuildOrder.CH_OcrEnabled.isChecked(),
+            'use_custom': dict(previous.get('use_custom', {})),
+            'custom': dict(previous.get('custom', {})),
+        }
+
+    def load_build_order_editor(self):
+        if not hasattr(self, 'TAB_BuildOrder'):
+            return
+        commander = self.TAB_BuildOrder.current_commander()
+        self.TAB_BuildOrder.set_default_steps(commander)
+        cfg = SM.settings.get('build_orders', {})
+        self.TAB_BuildOrder.CH_UseCustom.setChecked(cfg.get('use_custom', {}).get(commander, False))
+        self.TAB_BuildOrder.set_custom_text(cfg.get('custom', {}).get(commander, ''))
+
+    def save_build_order_editor(self):
+        commander = self.TAB_BuildOrder.current_commander()
+        cfg = SM.settings.setdefault('build_orders', {})
+        cfg.setdefault('use_custom', {})[commander] = self.TAB_BuildOrder.CH_UseCustom.isChecked()
+        cfg.setdefault('custom', {})[commander] = self.TAB_BuildOrder.get_custom_text()
+        SM.save_settings()
+        self.sendInfoMessage(f'Saved build order for {commander_display_name(commander)}', color=MColors.msg_success)
+
+    def reset_build_order_custom(self):
+        commander = self.TAB_BuildOrder.current_commander()
+        cfg = SM.settings.setdefault('build_orders', {})
+        cfg.setdefault('use_custom', {})[commander] = False
+        cfg.setdefault('custom', {})[commander] = ''
+        self.TAB_BuildOrder.CH_UseCustom.setChecked(False)
+        self.TAB_BuildOrder.set_custom_text('')
+        SM.save_settings()
+        self.sendInfoMessage(f'Cleared custom build order for {commander_display_name(commander)}', color=MColors.msg_success)
+
+    def test_build_order_ocr(self):
+        result = CS.detect_selection(log_regions=True)
+        if result:
+            commander = commander_display_name(result['commander'])
+            prestige = result.get('prestige')
+            prestige_title = prestige['title'] if prestige else 'unknown'
+            difficulty = result.get('difficulty') or 'unknown'
+            text = f"Detected: {commander} | prestige: {prestige_title} | difficulty: {difficulty}"
+            color = MColors.msg_success
+        else:
+            text = 'No commander detected. Open the co-op lobby (commander selection) screen first.'
+            color = MColors.msg_failure
+        self.TAB_BuildOrder.LA_OcrResult.setText(text)
+        self.sendInfoMessage(text, color=color)
+
+    def _end_build_order_overlay_preview(self):
+        if not self.build_order_overlay_preview:
+            return
+        self.build_order_overlay_preview = False
+        self.TAB_BuildOrder.CH_Preview.blockSignals(True)
+        self.TAB_BuildOrder.CH_Preview.setChecked(False)
+        self.TAB_BuildOrder.CH_Preview.setText('Preview overlay')
+        self.TAB_BuildOrder.CH_Preview.blockSignals(False)
+        MF.sendEvent({'buildOrderEndEvent': True})
+
+    def toggle_build_order_preview(self, checked: bool):
+        if checked:
+            commander = self.TAB_BuildOrder.CB_DefaultCommander.currentData() or 'Raynor'
+            order = BOS.get(commander)
+            if not order or not order.get('steps'):
+                self.TAB_BuildOrder.CH_Preview.blockSignals(True)
+                self.TAB_BuildOrder.CH_Preview.setChecked(False)
+                self.TAB_BuildOrder.CH_Preview.blockSignals(False)
+                self.sendInfoMessage('No build order steps to preview', color=MColors.msg_failure)
+                return
+            self.build_order_overlay_preview = True
+            self.TAB_BuildOrder.CH_Preview.setText('Stop preview')
+            MF.sendEvent({
+                'buildOrderStartEvent': True,
+                'commander': commander,
+                'display_name': order['display_name'],
+                'steps': order['steps'],
+                'source': order['source'],
+                'display_minutes': self.TAB_BuildOrder.SP_DisplayMinutes.value(),
+                'displayTime': 0,
+                'build_order_overlay': self._build_order_overlay_from_ui(),
+                'version': BUILD_ORDER_VERSION,
+            })
+        else:
+            self._end_build_order_overlay_preview()
+
     def sendInfoMessage(self, message, color=None):
         """ Sends info message. `color` specifies message color"""
         self.TAB_Main.LA_InfoLabel.setText(message)
@@ -1514,6 +1659,8 @@ if __name__ == "__main__":
     TabWidget.tray_icon.hide()
     ui.stop_full_analysis()
     ui._end_mission_overlay_preview()
+    ui._end_build_order_overlay_preview()
+    CS.stop_watcher()
     MF.stop_threads()
     ui.saveSettings()
     logger.info('Exit')

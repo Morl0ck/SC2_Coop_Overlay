@@ -8,6 +8,11 @@ pip install -r requirements.txt
 python SCO.py
 ```
 
+Commander and difficulty auto-detection also requires
+[Tesseract OCR](https://github.com/UB-Mannheim/tesseract/wiki) to be installed.
+On Windows, install it in the default location or add `tesseract.exe` to `PATH`.
+Without Tesseract, the build-order overlay uses the configured default commander.
+
 The app shows an overlay with replay analysis of StarCraft II Co-op games. It also provides match history, various statistics based on your replays, commander randomizer, info about players shown at the start of the game, custom twitch bot with game integration into MM maps, and more.
 
 For streamers the the overlay can be added as another layer in Open Broadcaster Software (OBS) or other streaming software applications. It's fully customizable through simple editing of the HTML, CSS and JS files. 

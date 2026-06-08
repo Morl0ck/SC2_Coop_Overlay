@@ -1,3 +1,4 @@
+import copy
 import os
 import json
 import traceback
@@ -14,11 +15,11 @@ def update_with_defaults(loaded: dict, default: dict):
         raise TypeError('default and loaded has to be dictionaries')
 
     for key in default:
-        # If there is a new key
-        if not key in loaded:
-            loaded[key] = default[key]
-        # If dictionary recursively do the same
-        if isinstance(default[key], dict):
+        if key not in loaded:
+            loaded[key] = copy.deepcopy(default[key])
+        elif isinstance(default[key], dict) and not isinstance(loaded[key], dict):
+            loaded[key] = copy.deepcopy(default[key])
+        elif isinstance(default[key], dict):
             update_with_defaults(loaded[key], default[key])
 
 
@@ -44,6 +45,26 @@ class CSettings:
                 'font_other': 1.2,       # font size for name / previous / upcoming (vh)
                 'panel_width': 22.0,     # mission panel width (vh)
                 'difficulty': 'auto',    # 'auto' | Casual | Normal | Hard | Brutal
+            },
+            'show_build_orders': True,
+            'build_orders': {
+                'default_commander': 'Raynor',
+                'display_minutes': 5.0,
+                'ocr_enabled': True,
+                'use_custom': {},
+                'custom': {},
+            },
+            'build_order_overlay': {
+                'anchor_h': 'left',
+                'anchor_v': 'top',
+                'offset_x': 2.0,
+                'offset_y': 2.0,
+                'opacity': 0.9,
+                'background_opacity': 0.4,
+                'font_title': 1.55,
+                'font_step': 1.2,
+                'panel_width': 22.0,
+                'max_steps': 0,
             },
             'duration': 60,
             'monitor': 1,
@@ -128,8 +149,7 @@ class CSettings:
             }
         }
 
-        # We don't need a deepcopy here. When resetting only the lower level gets changed.
-        self.settings = self.default_settings.copy()
+        self.settings = copy.deepcopy(self.default_settings)
 
     def load_settings(self, filepath: str):
         """ Load settings from a file"""
@@ -139,6 +159,8 @@ class CSettings:
             if os.path.isfile(self.filepath):
                 with open(self.filepath, 'r') as f:
                     self.settings = json.load(f)
+                if not isinstance(self.settings, dict):
+                    raise TypeError('Settings root has to be a dictionary')
 
             # If it's not there, save default settings
             else:
@@ -150,6 +172,7 @@ class CSettings:
             if os.path.isfile(self.filepath):
                 now = datetime.now().strftime("%Y%m%d_%H%M%S")
                 os.replace(self.filepath, f'{self.filepath.replace(".json","")}_corrupted ({now}).json')
+            self.settings = copy.deepcopy(self.default_settings)
 
         # Make sure all keys are here. This checks dictionaries recursively and fill missing keys.
         update_with_defaults(self.settings, self.default_settings)

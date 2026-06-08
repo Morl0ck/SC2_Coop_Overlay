@@ -16,6 +16,13 @@ from .MissionTimelines import (
     MISSION_TIMELINE_SOURCE_DATE,
     DIFFICULTIES,
 )
+from .BuildOrders import (
+    build_orders,
+    build_orders_defaults,
+    BUILD_ORDER_VERSION,
+    BUILD_ORDER_SOURCE,
+    BUILD_ORDER_SOURCE_DATE,
+)
 
 _DATADIR = 'SCOFunctions/SC2Dictionaries'
 _joinDATA = _functools.partial(get_file_path, subfolder=_DATADIR)

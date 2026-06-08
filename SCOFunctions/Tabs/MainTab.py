@@ -63,6 +63,16 @@ class MainTab(QtWidgets.QWidget):
             "Data from starcraft2coop.com (CC-BY-NC-SA-4.0, Aommaster).\n"
             "Requires restart to enable.")
 
+        # Show build order overlay
+        self.CH_ShowBuildOrders = QtWidgets.QCheckBox(self)
+        self.CH_ShowBuildOrders.setGeometry(QtCore.QRect(20, 8 * ch_distance, 230, 17))
+        self.CH_ShowBuildOrders.setText("Show build order overlay")
+        self.CH_ShowBuildOrders.setToolTip(
+            "During the first few minutes of a co-op game, shows your commander's build order.\n"
+            "Commander is auto-detected from the co-op lobby screen (OCR a second after you click), with a default fallback.\n"
+            "Data from starcraft2coop.com (CC-BY-NC-SA-4.0, Aommaster).\n"
+            "Requires restart to enable.")
+
         # Mnimized when clicked
         self.CH_MinimizeToTray = QtWidgets.QCheckBox(self)
         self.CH_MinimizeToTray.setGeometry(QtCore.QRect(20, 3 * ch_distance, 300, 17))

@@ -21,6 +21,8 @@ from websockets.legacy.server import \
 
 import SCOFunctions.HelperFunctions as HF
 from SCOFunctions.HelperFunctions import get_hash
+from SCOFunctions.BuildOrderTracker import BuildOrderTracker
+from SCOFunctions import CommanderSelection as CS
 from SCOFunctions.IdentifyMap import identify_map
 from SCOFunctions.MissionTracker import MissionTracker
 from SCOFunctions.MLogging import Logger
@@ -43,7 +45,8 @@ initMessage = {'initEvent': True,
                     'vespene' : False,
                     'resources' : False
                     },
-               'mission_overlay': {}
+               'mission_overlay': {},
+               'build_order_overlay': {}
                 }
 
 ReplayPosition = 0
@@ -72,6 +75,7 @@ def update_init_message() -> None:
     initMessage['duration'] = SM.settings['duration']
     initMessage['charts'] = SM.settings['charts']
     initMessage['mission_overlay'] = SM.settings['mission_overlay']
+    initMessage['build_order_overlay'] = SM.settings.get('build_order_overlay', {})
 
 def sendEvent(event: Dict[str, Any], raw: bool = False) -> None:
     """ Send message to the overlay """
@@ -123,6 +127,14 @@ def sendEvent(event: Dict[str, Any], raw: bool = False) -> None:
 
     elif event.get('missionEndEvent') is not None:
         WEBPAGE.runJavaScript("missionEnd();")
+
+    elif event.get('buildOrderStartEvent') is not None:
+        data = json.dumps(event)
+        logger.info(f"Sending build order start event: {event.get('display_name')}")
+        WEBPAGE.runJavaScript(f"buildOrderStart({data});")
+
+    elif event.get('buildOrderEndEvent') is not None:
+        WEBPAGE.runJavaScript("buildOrderEnd();")
 
 
 def resend_init_message() -> None:
@@ -671,6 +683,13 @@ def game_state_poller(progress_callback: QtCore.pyqtSignal) -> None:
 
     winrate_state = WinrateState()
     tracker = MissionTracker(send_event=sendEvent)
+    bo_tracker = BuildOrderTracker(send_event=sendEvent)
+
+    # Tracks the previous tick's displayTime so we can tell a *running* game from
+    # a frozen one. The live `/game` API keeps returning the last match's data
+    # (with a non-zero, frozen displayTime) while you sit on the commander
+    # selection screen, which would otherwise disable the selection OCR watcher.
+    prev_display_time = None
 
     while True:
         if APP_CLOSING:
@@ -680,7 +699,7 @@ def game_state_poller(progress_callback: QtCore.pyqtSignal) -> None:
         resp = None
         connection_error = False
         try:
-            timeout = 2 if tracker.idle else 5  # short timeout when idle/menus
+            timeout = 2 if tracker.idle and bo_tracker.idle else 5  # short timeout when idle/menus
             resp = session.get('http://localhost:6119/game', timeout=timeout).json()
         except requests.exceptions.ConnectionError:
             connection_error = True
@@ -692,14 +711,43 @@ def game_state_poller(progress_callback: QtCore.pyqtSignal) -> None:
         except Exception:
             logger.info(traceback.format_exc())
 
+        # Tell the selection-screen watcher whether we're in a live game so it
+        # skips click-triggered OCR while playing. Crucially, we only count it as
+        # "in game" when the clock is actually *advancing*: a frozen displayTime
+        # means the score screen or stale lobby data (you're on the commander
+        # selection screen), where OCR should run.
+        if resp is not None:
+            display_time = resp.get('displayTime', 0)
+            is_ingame = MissionTracker._is_ingame(
+                resp.get('players', list()), resp.get('isReplay', True), display_time)
+            # Unknown on the first tick (prev is None) -> trust _is_ingame so we
+            # don't OCR over a game already running at startup; from then on a
+            # frozen clock counts as "not in game".
+            clock_advancing = prev_display_time is None or display_time != prev_display_time
+            CS.set_in_game(is_ingame and clock_advancing)
+            prev_display_time = display_time
+        else:
+            CS.set_in_game(False)
+            prev_display_time = None
+
         # --- fan out (each path applies its own gating; no shared continues) ---
         if resp is not None:
             if SM.settings['show_player_winrates']:
                 winrate_path(resp, winrate_state, progress_callback)
             if SM.settings.get('show_mission_timeline', True):
                 tracker.update(resp)
-        elif connection_error and SM.settings.get('show_mission_timeline', True):
-            tracker.on_disconnect()
+            elif tracker.in_game or tracker.pending_game:
+                tracker.on_disconnect()
+            if SM.settings.get('show_build_orders', True):
+                bo_tracker.update(resp)
+            elif bo_tracker.in_game:
+                bo_tracker.on_disconnect()
+        else:
+            if connection_error:
+                if SM.settings.get('show_mission_timeline', True):
+                    tracker.on_disconnect()
+                if SM.settings.get('show_build_orders', True):
+                    bo_tracker.on_disconnect()
 
         # --- adaptive sleep (replaces flat 0.5s) ---
         time.sleep(poll_interval(resp))

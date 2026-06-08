@@ -102,6 +102,10 @@ function connect_to_socket() {
             missionSyncTime(data)
         } else if (data['missionEndEvent'] != null) {
             missionEnd()
+        } else if (data['buildOrderStartEvent'] != null) {
+            buildOrderStart(data)
+        } else if (data['buildOrderEndEvent'] != null) {
+            buildOrderEnd()
         } else {
             console.log('unidentified message')
         }
@@ -177,11 +181,14 @@ function playerWinrate(dat) {
 }
 
 function initColorsDuration(data) {
+    missionEnd();
+    buildOrderEnd();
     setColors(data['colors'][0], data['colors'][1], data['colors'][2], data['colors'][3]);
     DURATION = data['duration'];
     show_charts = data['charts']
     UpdateChartsVisibility();
     if (data['mission_overlay'] != null) applyMissionOverlaySettings(data['mission_overlay']);
+    if (data['build_order_overlay'] != null) applyBuildOrderOverlaySettings(data['build_order_overlay']);
     console.log('Received init data. Duration: ' + DURATION + 's. Show charts: ' + JSON.stringify(show_charts, null, 2));
 }
 
@@ -670,6 +677,10 @@ function applyMissionOverlaySettings(cfg) {
 
     // Live opacity update while shown
     if (missionVisible) panel.style.opacity = missionCfg.opacity;
+    else {
+        panel.style.opacity = '0';
+        panel.style.visibility = 'hidden';
+    }
 }
 
 function missionStart(data) {
@@ -692,6 +703,7 @@ function missionStart(data) {
     if (data['mission_overlay'] != null) applyMissionOverlaySettings(data['mission_overlay']);
     else applyMissionOverlaySettings(null);
     let panel = document.getElementById('missioninfo');
+    panel.style.visibility = 'visible';
     panel.style.opacity = missionCfg.opacity;
 
     renderMissionPanel();
@@ -736,7 +748,17 @@ function missionEnd() {
     missionDifficulty = 'Brutal';
     missionTimingDifficulty = 'Brutal';
     missionVisible = false;
-    document.getElementById('missioninfo').style.opacity = '0';
+    let panel = document.getElementById('missioninfo');
+    panel.style.opacity = '0';
+    panel.style.visibility = 'hidden';
+    missionLastNameStr = null;
+    missionLastPrevStr = null;
+    missionLastNextStr = null;
+    missionLastUpcomingStr = null;
+    document.getElementById('missionname').innerHTML = '';
+    document.getElementById('missionprev').innerHTML = '';
+    document.getElementById('missionnext').innerHTML = '';
+    document.getElementById('missionupcoming').innerHTML = '';
     console.log('Mission ended');
 }
 
@@ -851,4 +873,106 @@ function renderMissionPanel() {
         document.getElementById('missionupcoming').innerHTML = upcomingStr;
         missionLastUpcomingStr = upcomingStr;
     }
+}
+
+
+// ---------------------------------------------------------------------------
+// Build order overlay
+// ---------------------------------------------------------------------------
+var buildOrderSteps = [];
+var buildOrderTitle = '';
+var buildOrderVisible = false;
+var buildOrderLastHtml = null;
+var buildOrderCfg = {
+    anchor_h: 'left', anchor_v: 'top',
+    offset_x: 2, offset_y: 2,
+    opacity: 0.9,
+    background_opacity: 0.4,
+    panel_width: 22,
+    font_title: 1.55,
+    font_step: 1.2,
+    max_steps: 0
+};
+
+function applyBuildOrderOverlaySettings(cfg) {
+    if (cfg != null) {
+        for (let k in cfg) buildOrderCfg[k] = cfg[k];
+    }
+    let panel = document.getElementById('buildorder');
+    if (!panel) return;
+
+    panel.style.top = 'auto';
+    panel.style.bottom = 'auto';
+    panel.style.left = 'auto';
+    panel.style.right = 'auto';
+    if (buildOrderCfg.anchor_h === 'right') panel.style.right = buildOrderCfg.offset_x + 'vh';
+    else panel.style.left = buildOrderCfg.offset_x + 'vh';
+    if (buildOrderCfg.anchor_v === 'top') panel.style.top = buildOrderCfg.offset_y + 'vh';
+    else panel.style.bottom = buildOrderCfg.offset_y + 'vh';
+
+    panel.style.width = (buildOrderCfg.panel_width || 22) + 'vh';
+    panel.style.maxWidth = 'none';
+
+    document.getElementById('buildordertitle').style.fontSize = buildOrderCfg.font_title + 'vh';
+    document.getElementById('buildordersteps').style.fontSize = buildOrderCfg.font_step + 'vh';
+
+    let bgOpacity = buildOrderCfg.background_opacity != null ? buildOrderCfg.background_opacity : 0.4;
+    panel.style.backgroundColor = 'rgba(0, 0, 0, ' + bgOpacity + ')';
+
+    if (buildOrderVisible) panel.style.opacity = buildOrderCfg.opacity;
+    else {
+        panel.style.opacity = '0';
+        panel.style.visibility = 'hidden';
+    }
+}
+
+function renderBuildOrderPanel() {
+    let maxSteps = buildOrderCfg.max_steps || 0;
+    let steps = buildOrderSteps.slice();
+    if (maxSteps > 0) steps = steps.slice(0, maxSteps);
+
+    let renderKey = JSON.stringify(steps);
+    if (renderKey !== buildOrderLastHtml) {
+        let container = document.getElementById('buildordersteps');
+        let fragment = document.createDocumentFragment();
+        for (let i = 0; i < steps.length; i++) {
+            let step = document.createElement('div');
+            step.className = 'buildorder-step';
+            step.textContent = steps[i];
+            fragment.appendChild(step);
+        }
+        container.replaceChildren(fragment);
+        buildOrderLastHtml = renderKey;
+    }
+}
+
+function buildOrderStart(data) {
+    if (data == null || data['steps'] == null) return;
+    buildOrderSteps = data['steps'].slice();
+    buildOrderTitle = data['display_name'] || data['commander'] || '';
+    buildOrderLastHtml = null;
+    buildOrderVisible = true;
+
+    if (data['build_order_overlay'] != null) applyBuildOrderOverlaySettings(data['build_order_overlay']);
+    else applyBuildOrderOverlaySettings(null);
+
+    document.getElementById('buildordertitle').textContent = buildOrderTitle;
+    let panel = document.getElementById('buildorder');
+    panel.style.visibility = 'visible';
+    panel.style.opacity = buildOrderCfg.opacity;
+    renderBuildOrderPanel();
+}
+
+function buildOrderEnd() {
+    buildOrderVisible = false;
+    buildOrderSteps = [];
+    buildOrderTitle = '';
+    buildOrderLastHtml = null;
+    let panel = document.getElementById('buildorder');
+    if (panel) {
+        panel.style.opacity = 0;
+        panel.style.visibility = 'hidden';
+    }
+    document.getElementById('buildordertitle').textContent = '';
+    document.getElementById('buildordersteps').textContent = '';
 }
