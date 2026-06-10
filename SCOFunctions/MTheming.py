@@ -42,7 +42,8 @@ def dark_tab_stylesheet() -> str:
     )
 
 
-def mission_tab_stylesheet() -> str:
+def overlay_tab_stylesheet() -> str:
+    """ Shared styling for the overlay settings tabs (Mission Overlay, Build Order). """
     card_bg = '#404040'
     card_border = '#666'
     accent = '#4791ff'
@@ -50,26 +51,26 @@ def mission_tab_stylesheet() -> str:
     text_secondary = '#c8c8c8'
     text_muted = '#a8a8a8'
     return (
-        f"QLabel#MissionPageTitle {{ color: {text_primary}; font-size: 16px; font-weight: 600; }}"
-        f"QLabel#MissionSectionTitle {{ color: {text_primary}; font-size: 13px; font-weight: 600; }}"
-        f"QLabel#MissionFieldLabel {{ color: {text_primary}; }}"
-        f"QLabel#MissionSubsectionLabel {{ color: {text_secondary}; font-size: 11px; font-weight: 600; }}"
-        f"QLabel#MissionHintLabel {{ color: {text_secondary}; font-size: 11px; }}"
-        f"QLabel#MissionHintLabel a {{ color: {accent}; }}"
-        f"QLabel#MissionUnitLabel {{ color: {text_muted}; }}"
-        f"QFrame#MissionSectionCard, QFrame#MissionFooterBar {{"
+        f"QLabel#OverlayPageTitle {{ color: {text_primary}; font-size: 16px; font-weight: 600; }}"
+        f"QLabel#OverlaySectionTitle {{ color: {text_primary}; font-size: 13px; font-weight: 600; }}"
+        f"QLabel#OverlayFieldLabel {{ color: {text_primary}; }}"
+        f"QLabel#OverlaySubsectionLabel {{ color: {text_secondary}; font-size: 11px; font-weight: 600; }}"
+        f"QLabel#OverlayHintLabel {{ color: {text_secondary}; font-size: 11px; }}"
+        f"QLabel#OverlayHintLabel a {{ color: {accent}; }}"
+        f"QLabel#OverlayUnitLabel {{ color: {text_muted}; }}"
+        f"QFrame#OverlaySectionCard, QFrame#OverlayFooterBar {{"
         f" background: {card_bg}; border: 1px solid {card_border}; border-radius: 4px; }}"
-        f"QTabWidget#MissionSubTabs::pane {{ border: 1px solid {card_border}; background: {TAB_ACTIVE_BG};"
+        f"QTabWidget#OverlaySubTabs::pane {{ border: 1px solid {card_border}; background: {TAB_ACTIVE_BG};"
         f" border-radius: 4px; top: -1px; }}"
-        f"QTabWidget#MissionSubTabs QTabBar::tab {{ background: {TAB_INACTIVE_BG}; color: {text_primary};"
+        f"QTabWidget#OverlaySubTabs QTabBar::tab {{ background: {TAB_INACTIVE_BG}; color: {text_primary};"
         f" padding: 6px 14px; border: 1px solid {card_border}; border-bottom: none; margin-right: 2px; }}"
-        f"QTabWidget#MissionSubTabs QTabBar::tab:selected {{ background: {TAB_ACTIVE_BG};"
+        f"QTabWidget#OverlaySubTabs QTabBar::tab:selected {{ background: {TAB_ACTIVE_BG};"
         f" border-bottom: 1px solid {TAB_ACTIVE_BG}; }}"
-        f"QPushButton#MissionPrimaryButton {{ background: {accent}; color: white; font-weight: 600;"
+        f"QPushButton#OverlayPrimaryButton {{ background: {accent}; color: white; font-weight: 600;"
         f" border: 1px solid #3a7fd8; padding: 6px 14px; }}"
-        f"QPushButton#MissionPrimaryButton:hover {{ background: #5aa0ff; }}"
-        f"QPushButton#MissionSecondaryButton {{ padding: 6px 14px; }}"
-        f"QPushButton#MissionSecondaryButton:checked {{ background: #555; border: 1px solid #777; }}"
+        f"QPushButton#OverlayPrimaryButton:hover {{ background: #5aa0ff; }}"
+        f"QPushButton#OverlaySecondaryButton {{ padding: 6px 14px; }}"
+        f"QPushButton#OverlaySecondaryButton:checked {{ background: #555; border: 1px solid #777; }}"
     )
 
 
@@ -163,7 +164,7 @@ def set_dark_theme(main, app, tab, version):
     main.TAB_Randomizer.BT_RNG_Description.setEnabled(True)
 
     tab.setStyleSheet(dark_tab_stylesheet()
-                      + mission_tab_stylesheet()
+                      + overlay_tab_stylesheet()
                       + stats_tab_stylesheet()
                       + "QScrollArea > QWidget > QWidget {background: #454545}"
                       "QPushButton {background: #454545}"

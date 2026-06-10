@@ -23,6 +23,7 @@ import SCOFunctions.HelperFunctions as HF
 from SCOFunctions.HelperFunctions import get_hash
 from SCOFunctions.BuildOrderTracker import BuildOrderTracker
 from SCOFunctions import CommanderSelection as CS
+from SCOFunctions import CoopGameState
 from SCOFunctions.IdentifyMap import identify_map
 from SCOFunctions.MissionTracker import MissionTracker
 from SCOFunctions.MLogging import Logger
@@ -718,13 +719,13 @@ def game_state_poller(progress_callback: QtCore.pyqtSignal) -> None:
         # selection screen), where OCR should run.
         if resp is not None:
             display_time = resp.get('displayTime', 0)
-            is_ingame = MissionTracker._is_ingame(
+            ingame_now = CoopGameState.is_ingame(
                 resp.get('players', list()), resp.get('isReplay', True), display_time)
-            # Unknown on the first tick (prev is None) -> trust _is_ingame so we
+            # Unknown on the first tick (prev is None) -> trust is_ingame so we
             # don't OCR over a game already running at startup; from then on a
             # frozen clock counts as "not in game".
             clock_advancing = prev_display_time is None or display_time != prev_display_time
-            CS.set_in_game(is_ingame and clock_advancing)
+            CS.set_in_game(ingame_now and clock_advancing)
             prev_display_time = display_time
         else:
             CS.set_in_game(False)

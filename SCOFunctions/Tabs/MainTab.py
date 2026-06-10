@@ -59,9 +59,10 @@ class MainTab(QtWidgets.QWidget):
         self.CH_ShowMissionTimeline.setText("Show mission timeline")
         self.CH_ShowMissionTimeline.setToolTip(
             "During a co-op game, shows a live countdown to the next attack wave and mission objective.\n"
-            "Timings are for Brutal difficulty and are bundled offline.\n"
+            "Timings are bundled offline for multiple difficulties and can be edited on the Mission Overlay tab.\n"
             "Data from starcraft2coop.com (CC-BY-NC-SA-4.0, Aommaster).\n"
-            "Requires restart to enable.")
+            "Disabling applies immediately. Enabling may require a restart if winrates\n"
+            "and build orders were also off when the app started.")
 
         # Show build order overlay
         self.CH_ShowBuildOrders = QtWidgets.QCheckBox(self)
@@ -71,7 +72,8 @@ class MainTab(QtWidgets.QWidget):
             "During the first few minutes of a co-op game, shows your commander's build order.\n"
             "Commander is auto-detected from the co-op lobby screen (OCR a second after you click), with a default fallback.\n"
             "Data from starcraft2coop.com (CC-BY-NC-SA-4.0, Aommaster).\n"
-            "Requires restart to enable.")
+            "Disabling applies immediately. Enabling may require a restart if winrates\n"
+            "and the mission timeline were also off when the app started.")
 
         # Mnimized when clicked
         self.CH_MinimizeToTray = QtWidgets.QCheckBox(self)

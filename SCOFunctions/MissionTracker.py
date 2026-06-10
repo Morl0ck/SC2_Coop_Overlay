@@ -18,10 +18,10 @@ from typing import Any, Callable, Dict, List, Optional
 
 from SCOFunctions.CommanderSelection import SELECTION
 from SCOFunctions.CoopDifficulty import resolve_mission_difficulty
+from SCOFunctions.CoopGameState import StallDetector, all_users, is_ingame
 from SCOFunctions.IdentifyMap import identify_map
 from SCOFunctions.MLogging import Logger
 from SCOFunctions.MissionTimelineStore import MTS
-from SCOFunctions.SC2Dictionaries import MISSION_TIMELINE_VERSION
 from SCOFunctions.Settings import Setting_manager as SM
 
 logger = Logger('MTRK', Logger.levels.INFO)
@@ -43,6 +43,7 @@ class MissionTracker:
         self._suppressed_display_time = None
         # One-shot startup baseline (see update()): only set once, never in reset().
         self._startup_seen = False
+        self.stall = StallDetector(self.STALL_LIMIT)
         self.reset()
 
     def reset(self) -> None:
@@ -53,30 +54,11 @@ class MissionTracker:
         self.current_timing_difficulty = None
         self.selection_difficulty = None
         self.pending_game = False
-        self.last_display_time = None
         self.last_sent_display_time = None
         self.last_sync_wallclock = 0.0
-        self.stall_count = 0
+        self.stall.reset()
 
     # --- helpers -----------------------------------------------------------
-    @staticmethod
-    def _all_users(players: List[Dict[str, Any]]) -> bool:
-        for player in players:
-            if player.get('type') != 'user':
-                return False
-        return True
-
-    @staticmethod
-    def _is_ingame(players: List[Dict[str, Any]], is_replay: bool, display_time: float) -> bool:
-        """ A live co-op game: not a replay, >2 players, not all-human (versus), clock running. """
-        if is_replay:
-            return False
-        if len(players) <= 2:
-            return False
-        if MissionTracker._all_users(players):
-            return False
-        return display_time and display_time > 0
-
     def _settings_requested_difficulty(
         self,
         players: List[Dict[str, Any]],
@@ -113,7 +95,9 @@ class MissionTracker:
             'timing_difficulty': timing,
             'events': timeline['events'],
             'displayTime': display_time,
-            'version': MISSION_TIMELINE_VERSION,
+            # Layout settings ride along so secondary overlays (OBS browser
+            # sources) connecting mid-game don't depend on a prior init message.
+            'mission_overlay': dict(SM.settings.get('mission_overlay', {})),
         })
 
     def _reload_timeline(self, requested: str, display_time: float) -> bool:
@@ -150,7 +134,7 @@ class MissionTracker:
 
     def _end(self, score_screen: bool = False) -> None:
         self._send_event({'missionEndEvent': True})
-        ended_display_time = self.last_display_time
+        ended_display_time = self.stall.last_display_time
         self.reset()
         SELECTION.clear()
         # The score screen keeps reporting a valid in-game state with a frozen
@@ -186,8 +170,7 @@ class MissionTracker:
 
         self.in_game = True
         self.idle = False
-        self.last_display_time = display_time
-        self.stall_count = 0
+        self.stall.reset(display_time)
         self._emit_timeline_start(map_found, requested, timeline, display_time)
 
     # --- main entry --------------------------------------------------------
@@ -205,7 +188,7 @@ class MissionTracker:
         # game has a different displayTime and starts normally.
         if not self._startup_seen:
             self._startup_seen = True
-            if not self.in_game and self._is_ingame(players, is_replay, display_time):
+            if not self.in_game and is_ingame(players, is_replay, display_time):
                 self._suppress_restart = True
                 self._suppressed_display_time = display_time
                 self.idle = True
@@ -213,7 +196,7 @@ class MissionTracker:
 
         if not self.in_game:
             self.idle = True
-            if self._is_ingame(players, is_replay, display_time):
+            if is_ingame(players, is_replay, display_time):
                 self.pending_game = True
                 # Don't restart on the frozen score screen we just ended on
                 # (or the one in progress when the app started).
@@ -239,21 +222,16 @@ class MissionTracker:
             self._reload_timeline(requested, display_time)
 
         # Hard game-end signals (returned to menus / replay / versus state).
-        if is_replay or len(players) <= 2 or self._all_users(players):
+        if is_replay or len(players) <= 2 or all_users(players):
             self._end()
             return
 
         # Score screen: `/game` keeps returning the final non-zero displayTime,
         # so detect end via the clock no longer advancing across several polls.
-        if display_time == self.last_display_time:
-            self.stall_count += 1
-            if self.stall_count >= self.STALL_LIMIT:
-                logger.info('Game clock stalled (score screen) -> mission end')
-                self._end(score_screen=True)
-                return
-        else:
-            self.stall_count = 0
-            self.last_display_time = display_time
+        if self.stall.update(display_time):
+            logger.info('Game clock stalled (score screen) -> mission end')
+            self._end(score_screen=True)
+            return
 
         # Clock sync: only when the value changed, or as periodic drift correction.
         now = time.time()

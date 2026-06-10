@@ -41,6 +41,7 @@ class CSettings:
                 'background_opacity': 0.4,  # mission panel background alpha (0-1)
                 'show_previous': True,
                 'show_upcoming': True,
+                'upcoming_count': 3,     # upcoming events shown, incl. the NEXT line (1-3)
                 'font_next': 1.55,       # font size for the NEXT line (vh)
                 'font_other': 1.2,       # font size for name / previous / upcoming (vh)
                 'panel_width': 22.0,     # mission panel width (vh)
@@ -51,6 +52,7 @@ class CSettings:
                 'default_commander': 'Raynor',
                 'display_minutes': 5.0,
                 'ocr_enabled': True,
+                'ocr_debug': False,
                 'use_custom': {},
                 'custom': {},
             },

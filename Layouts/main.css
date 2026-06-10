@@ -496,6 +496,11 @@ body {
     font-size: 0.85em;
 }
 
+.mission-pattern {
+    color: #C9A0FF;
+    font-size: 0.85em;
+}
+
 #killbar>div>img {
     position: absolute;
     top: 0vh;

@@ -40,9 +40,10 @@ def test_tracker_display_cutoff() -> None:
 
     tracker = BuildOrderTracker(send_event=events.append)
     tracker.in_game = True
+    tracker.emitted = True
     tracker.current_commander = 'Raynor'
     tracker.display_cutoff = 300
-    tracker.last_display_time = 301
+    tracker.stall.reset(301)
 
     tracker.update({
         'players': [{'id': 1, 'type': 'user', 'name': 'Me'}, {'id': 2, 'type': 'user', 'name': 'Ally'}, {'id': 3, 'type': 'computer'}],
@@ -51,6 +52,44 @@ def test_tracker_display_cutoff() -> None:
     })
     assert any(e.get('buildOrderEndEvent') for e in events)
     assert tracker.done is True
+
+
+def test_tracker_retries_when_no_steps() -> None:
+    """A commander without steps at game start is retried within the display
+    window instead of being marked done for the whole game."""
+    original_settings = copy.deepcopy(SM.settings)
+    original_entry = build_orders_defaults['Raynor']
+    events = []
+    try:
+        SM.settings['build_orders'] = {
+            'default_commander': 'Raynor',
+            'display_minutes': 5,
+            'ocr_enabled': False,
+            'use_custom': {},
+            'custom': {},
+        }
+        build_orders_defaults['Raynor'] = dict(original_entry, steps=[])
+
+        tracker = BuildOrderTracker(send_event=events.append)
+        tracker._startup_seen = True
+        game = {
+            'players': [{'id': 1, 'type': 'user'}, {'id': 2, 'type': 'user'}, {'id': 3, 'type': 'computer'}],
+            'isReplay': False,
+            'displayTime': 10,
+        }
+        tracker.update(game)
+        assert not any(e.get('buildOrderStartEvent') for e in events)
+        assert tracker.in_game and not tracker.done and not tracker.emitted
+
+        # Steps become available mid-game (stand-in for the user saving a
+        # custom build order) -> the next poll emits the start event.
+        build_orders_defaults['Raynor'] = original_entry
+        tracker.update(dict(game, displayTime=15))
+        assert any(e.get('buildOrderStartEvent') for e in events)
+        assert tracker.emitted
+    finally:
+        build_orders_defaults['Raynor'] = original_entry
+        SM.settings = original_settings
 
 
 def test_ocr_fuzzy_match() -> None:
@@ -144,6 +183,7 @@ if __name__ == '__main__':
     test_bundled_commanders_have_steps()
     test_custom_override()
     test_tracker_display_cutoff()
+    test_tracker_retries_when_no_steps()
     test_ocr_fuzzy_match()
     test_selection_cache_expires()
     test_build_tracker_consumes_selection()

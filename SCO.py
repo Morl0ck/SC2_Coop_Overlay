@@ -52,7 +52,7 @@ from SCOFunctions.BuildOrderStore import BOS
 from SCOFunctions.CommanderOCR import commander_display_name
 from SCOFunctions import CommanderSelection as CS
 from SCOFunctions.MissionTimelineStore import MTS, empty_mission_data, mmss_to_seconds, seconds_to_mmss
-from SCOFunctions.SC2Dictionaries import MISSION_TIMELINE_VERSION, BUILD_ORDER_VERSION, DIFFICULTIES
+from SCOFunctions.SC2Dictionaries import DIFFICULTIES
 from SCOFunctions.Settings import Setting_manager as SM
 
 logger = Logger('SCO', Logger.levels.INFO)
@@ -133,6 +133,11 @@ class UI_TabWidget(object):
         self.TAB_Mutations = Tabs.MutationTab(TabWidget)
         self.TAB_Mission = Tabs.MissionTab(self)
         self.TAB_BuildOrder = Tabs.BuildOrderTab(self)
+
+        # Both tabs expose the same global full-width setting; keep the two
+        # checkboxes in sync so toggling one doesn't silently change the other.
+        self.TAB_Mission.CH_FullWidth.toggled.connect(self.TAB_BuildOrder.CH_FullWidth.setChecked)
+        self.TAB_BuildOrder.CH_FullWidth.toggled.connect(self.TAB_Mission.CH_FullWidth.setChecked)
 
         # Add tabs to the widget
         TabWidget.addTab(self.TAB_Main, "Settings")
@@ -380,6 +385,7 @@ class UI_TabWidget(object):
         self.TAB_Mission.SP_PanelWidth.setValue(mo.get('panel_width', 22.0))
         self.TAB_Mission.CH_ShowPrevious.setChecked(mo['show_previous'])
         self.TAB_Mission.CH_ShowUpcoming.setChecked(mo.get('show_upcoming', mo.get('show_next', True)))
+        self.TAB_Mission.SP_UpcomingCount.setValue(int(mo.get('upcoming_count', 3)))
         self.TAB_Mission.SP_FontNext.setValue(mo['font_next'])
         self.TAB_Mission.SP_FontOther.setValue(mo['font_other'])
         self.TAB_Mission.CH_FullWidth.setChecked(SM.settings['width'] >= 0.999)
@@ -1455,6 +1461,7 @@ class UI_TabWidget(object):
             'panel_width': self.TAB_Mission.SP_PanelWidth.value(),
             'show_previous': self.TAB_Mission.CH_ShowPrevious.isChecked(),
             'show_upcoming': self.TAB_Mission.CH_ShowUpcoming.isChecked(),
+            'upcoming_count': self.TAB_Mission.SP_UpcomingCount.value(),
             'font_next': self.TAB_Mission.SP_FontNext.value(),
             'font_other': self.TAB_Mission.SP_FontOther.value(),
             'difficulty': (
@@ -1506,7 +1513,6 @@ class UI_TabWidget(object):
                 'events': events,
                 'displayTime': self._preview_display_time(events),
                 'mission_overlay': self._mission_overlay_from_ui(),
-                'version': MISSION_TIMELINE_VERSION,
             })
         else:
             self._end_mission_overlay_preview()
@@ -1589,7 +1595,11 @@ class UI_TabWidget(object):
 
     def toggle_build_order_preview(self, checked: bool):
         if checked:
-            commander = self.TAB_BuildOrder.CB_DefaultCommander.currentData() or 'Raynor'
+            # Preview the commander selected in the editor so users see the
+            # build order they are editing; fall back to the default commander.
+            commander = (self.TAB_BuildOrder.current_commander()
+                         or self.TAB_BuildOrder.CB_DefaultCommander.currentData()
+                         or 'Raynor')
             order = BOS.get(commander)
             if not order or not order.get('steps'):
                 self.TAB_BuildOrder.CH_Preview.blockSignals(True)
@@ -1604,11 +1614,7 @@ class UI_TabWidget(object):
                 'commander': commander,
                 'display_name': order['display_name'],
                 'steps': order['steps'],
-                'source': order['source'],
-                'display_minutes': self.TAB_BuildOrder.SP_DisplayMinutes.value(),
-                'displayTime': 0,
                 'build_order_overlay': self._build_order_overlay_from_ui(),
-                'version': BUILD_ORDER_VERSION,
             })
         else:
             self._end_build_order_overlay_preview()

@@ -181,8 +181,6 @@ function playerWinrate(dat) {
 }
 
 function initColorsDuration(data) {
-    missionEnd();
-    buildOrderEnd();
     setColors(data['colors'][0], data['colors'][1], data['colors'][2], data['colors'][3]);
     DURATION = data['duration'];
     show_charts = data['charts']
@@ -627,7 +625,6 @@ var missionLastNextStr = null;
 var missionLastUpcomingStr = null;
 var missionLastNameStr = null;
 var missionLastPrevStr = null;
-var missionUpcomingLimit = 3;
 var missionVisible = false;
 var missionCfg = {
     anchor_h: 'left', anchor_v: 'bottom',
@@ -636,8 +633,36 @@ var missionCfg = {
     background_opacity: 0.4,
     panel_width: 22,
     show_previous: true, show_upcoming: true,
+    upcoming_count: 3,
     font_next: 1.55, font_other: 1.2
 };
+
+
+function applyOverlayPanelSettings(panel, cfg, visible) {
+    // Shared positioning / sizing / opacity logic for the corner-anchored
+    // overlay panels (mission timeline, build order).
+    panel.style.top = 'auto';
+    panel.style.bottom = 'auto';
+    panel.style.left = 'auto';
+    panel.style.right = 'auto';
+    if (cfg.anchor_h === 'right') panel.style.right = cfg.offset_x + 'vh';
+    else panel.style.left = cfg.offset_x + 'vh';
+    if (cfg.anchor_v === 'top') panel.style.top = cfg.offset_y + 'vh';
+    else panel.style.bottom = cfg.offset_y + 'vh';
+
+    panel.style.width = (cfg.panel_width || 22) + 'vh';
+    panel.style.maxWidth = 'none';
+
+    let bgOpacity = cfg.background_opacity != null ? cfg.background_opacity : 0.4;
+    panel.style.backgroundColor = 'rgba(0, 0, 0, ' + bgOpacity + ')';
+
+    // Live opacity update while shown
+    if (visible) panel.style.opacity = cfg.opacity;
+    else {
+        panel.style.opacity = '0';
+        panel.style.visibility = 'hidden';
+    }
+}
 
 
 function applyMissionOverlaySettings(cfg) {
@@ -646,20 +671,7 @@ function applyMissionOverlaySettings(cfg) {
         for (let k in cfg) missionCfg[k] = cfg[k];
         if (cfg.show_upcoming == null && cfg.show_next != null) missionCfg.show_upcoming = cfg.show_next;
     }
-    let panel = document.getElementById('missioninfo');
-
-    // Position (anchor to a corner with an offset, in vh)
-    panel.style.top = 'auto';
-    panel.style.bottom = 'auto';
-    panel.style.left = 'auto';
-    panel.style.right = 'auto';
-    if (missionCfg.anchor_h === 'right') panel.style.right = missionCfg.offset_x + 'vh';
-    else panel.style.left = missionCfg.offset_x + 'vh';
-    if (missionCfg.anchor_v === 'top') panel.style.top = missionCfg.offset_y + 'vh';
-    else panel.style.bottom = missionCfg.offset_y + 'vh';
-
-    panel.style.width = (missionCfg.panel_width || 22) + 'vh';
-    panel.style.maxWidth = 'none';
+    applyOverlayPanelSettings(document.getElementById('missioninfo'), missionCfg, missionVisible);
 
     // Font sizes
     document.getElementById('missionnext').style.fontSize = missionCfg.font_next + 'vh';
@@ -671,21 +683,11 @@ function applyMissionOverlaySettings(cfg) {
     document.getElementById('missionprev').style.display = missionCfg.show_previous ? 'block' : 'none';
     document.getElementById('missionnext').style.display = 'block';
     document.getElementById('missionupcoming').style.display = missionCfg.show_upcoming ? 'block' : 'none';
-
-    let bgOpacity = missionCfg.background_opacity != null ? missionCfg.background_opacity : 0.4;
-    panel.style.backgroundColor = 'rgba(0, 0, 0, ' + bgOpacity + ')';
-
-    // Live opacity update while shown
-    if (missionVisible) panel.style.opacity = missionCfg.opacity;
-    else {
-        panel.style.opacity = '0';
-        panel.style.visibility = 'hidden';
-    }
 }
 
 function missionStart(data) {
     if (data == null || data['events'] == null) return;
-    missionEvents = data['events'].slice().sort(function (a, b) { return a.time - b.time; });
+    missionEvents = data['events'].slice();  // already time-sorted by Python
     missionMapName = data['map_name'] || '';
     missionDifficulty = data['difficulty'] || 'Brutal';
     missionTimingDifficulty = data['timing_difficulty'] || missionDifficulty;
@@ -811,22 +813,29 @@ function missionEventText(ev, gameTime, past) {
     let timeStr = missionFormatCountdown(delta) + (past ? ' ago' : '');
     let cls = ev.kind === 'attack_wave' ? 'mission-wave' : 'mission-objective';
     let label = ev.label || (ev.kind === 'attack_wave' ? 'Attack wave' : 'Event');
-    if (ev.pattern != null) label += ' [' + ev.pattern + ']';
+    if (ev.pattern != null) label += ' <span class="mission-pattern">[' + ev.pattern + ']</span>';
 
     let detail = '';
     let parts = [];
     if (ev.tech != null && ev.strength != null) parts.push('T' + ev.tech + '/S' + ev.strength);
     if (ev.spawn != null) parts.push(ev.spawn);
+    if (ev.notes != null && ev.notes !== '') parts.push(ev.notes);
     if (parts.length > 0) detail = ' <span class="mission-detail">(' + parts.join(', ') + ')</span>';
 
     return '<span class="' + cls + '">' + label + '</span> <span class="mission-countdown">' + timeStr + '</span>' + detail;
 }
 
 
+function missionUpcomingLimit() {
+    let count = missionCfg.upcoming_count != null ? missionCfg.upcoming_count : 3;
+    return Math.max(1, Math.min(3, count));
+}
+
+
 function renderMissionPanel() {
     if (missionEvents.length === 0) return;
     let gameTime = missionCurrentTime();
-    let upcoming = getUpcomingEvents(gameTime, missionEvents, missionUpcomingLimit);
+    let upcoming = getUpcomingEvents(gameTime, missionEvents, missionUpcomingLimit());
 
     // Map name (+ active difficulty; note when timings come from a harder fallback)
     let diffLabel = missionDifficulty;
@@ -850,10 +859,22 @@ function renderMissionPanel() {
         missionLastPrevStr = prevStr;
     }
 
-    // NEXT line
+    // NEXT line. Pattern A/B entries are mutually exclusive branches (the game
+    // picks one), so when the immediately following events belong to different
+    // patterns, present them together as alternatives instead of two waves.
     let nextStr;
+    let nextCount = 1;
     if (upcoming.length > 0) {
-        nextStr = '<span class="mission-label">NEXT:</span> ' + missionEventText(upcoming[0], gameTime);
+        let nextParts = [missionEventText(upcoming[0], gameTime)];
+        if (upcoming[0].pattern != null) {
+            for (let i = 1; i < upcoming.length; i++) {
+                if (upcoming[i].pattern != null && upcoming[i].pattern !== upcoming[0].pattern) {
+                    nextParts.push(missionEventText(upcoming[i], gameTime));
+                    nextCount = i + 1;
+                } else break;
+            }
+        }
+        nextStr = '<span class="mission-label">NEXT:</span> ' + nextParts.join(' <span class="mission-label">or</span> ');
     } else {
         nextStr = '<span class="mission-label">No further events</span>';
     }
@@ -865,7 +886,7 @@ function renderMissionPanel() {
     // Following lines (upcoming events after NEXT)
     let upcomingStr = '';
     if (missionCfg.show_upcoming) {
-        for (let i = 1; i < upcoming.length; i++) {
+        for (let i = nextCount; i < upcoming.length; i++) {
             upcomingStr += '<span class="mission-label">THEN:</span> ' + missionEventText(upcoming[i], gameTime) + '<br>';
         }
     }
@@ -900,30 +921,10 @@ function applyBuildOrderOverlaySettings(cfg) {
     }
     let panel = document.getElementById('buildorder');
     if (!panel) return;
-
-    panel.style.top = 'auto';
-    panel.style.bottom = 'auto';
-    panel.style.left = 'auto';
-    panel.style.right = 'auto';
-    if (buildOrderCfg.anchor_h === 'right') panel.style.right = buildOrderCfg.offset_x + 'vh';
-    else panel.style.left = buildOrderCfg.offset_x + 'vh';
-    if (buildOrderCfg.anchor_v === 'top') panel.style.top = buildOrderCfg.offset_y + 'vh';
-    else panel.style.bottom = buildOrderCfg.offset_y + 'vh';
-
-    panel.style.width = (buildOrderCfg.panel_width || 22) + 'vh';
-    panel.style.maxWidth = 'none';
+    applyOverlayPanelSettings(panel, buildOrderCfg, buildOrderVisible);
 
     document.getElementById('buildordertitle').style.fontSize = buildOrderCfg.font_title + 'vh';
     document.getElementById('buildordersteps').style.fontSize = buildOrderCfg.font_step + 'vh';
-
-    let bgOpacity = buildOrderCfg.background_opacity != null ? buildOrderCfg.background_opacity : 0.4;
-    panel.style.backgroundColor = 'rgba(0, 0, 0, ' + bgOpacity + ')';
-
-    if (buildOrderVisible) panel.style.opacity = buildOrderCfg.opacity;
-    else {
-        panel.style.opacity = '0';
-        panel.style.visibility = 'hidden';
-    }
 }
 
 function renderBuildOrderPanel() {

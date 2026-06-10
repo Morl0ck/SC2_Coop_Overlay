@@ -1,6 +1,8 @@
 import webbrowser
 
-from PyQt5 import QtCore, QtWidgets
+from PyQt5 import QtWidgets
+
+from SCOFunctions.Tabs import OverlayTabShared
 
 
 class MissionTab(QtWidgets.QWidget):
@@ -12,6 +14,15 @@ class MissionTab(QtWidgets.QWidget):
     COL_PATTERN = 5
 
     HEADERS = ['Label', 'Time', 'Tech', 'Strength', 'Spawn', 'Pattern']
+
+    # Shared layout helpers (also used by BuildOrderTab)
+    _hint_label = staticmethod(OverlayTabShared.hint_label)
+    _subsection_label = staticmethod(OverlayTabShared.subsection_label)
+    _section_title = staticmethod(OverlayTabShared.section_title)
+    _section_card = staticmethod(OverlayTabShared.section_card)
+    _labeled_field = staticmethod(OverlayTabShared.labeled_field)
+    _vh_spinbox = staticmethod(OverlayTabShared.vh_spinbox)
+    _value_with_unit = staticmethod(OverlayTabShared.value_with_unit)
 
     def __init__(self, parent):
         super().__init__()
@@ -27,89 +38,10 @@ class MissionTab(QtWidgets.QWidget):
         self.tab_timelines = QtWidgets.QWidget()
         self.sub_tabs.addTab(self.tab_settings, 'Appearance')
         self.sub_tabs.addTab(self.tab_timelines, 'Timelines')
-        self.sub_tabs.setObjectName('MissionSubTabs')
+        self.sub_tabs.setObjectName('OverlaySubTabs')
 
         self._build_settings_tab()
         self._build_timelines_tab()
-
-    @staticmethod
-    def _hint_label(text):
-        label = QtWidgets.QLabel(text)
-        label.setWordWrap(True)
-        label.setObjectName('MissionHintLabel')
-        return label
-
-    @staticmethod
-    def _subsection_label(text):
-        label = QtWidgets.QLabel(text)
-        label.setObjectName('MissionSubsectionLabel')
-        return label
-
-    @staticmethod
-    def _section_title(text, subtitle=None):
-        block = QtWidgets.QVBoxLayout()
-        block.setSpacing(2)
-        block.setContentsMargins(0, 0, 0, 0)
-
-        title = QtWidgets.QLabel(text)
-        title.setObjectName('MissionSectionTitle')
-        block.addWidget(title)
-
-        if subtitle:
-            block.addWidget(MissionTab._hint_label(subtitle))
-        return block
-
-    @staticmethod
-    def _section_card():
-        card = QtWidgets.QFrame()
-        card.setObjectName('MissionSectionCard')
-        card.setAutoFillBackground(True)
-        card.setFrameShape(QtWidgets.QFrame.StyledPanel)
-        card.setFrameShadow(QtWidgets.QFrame.Plain)
-        layout = QtWidgets.QVBoxLayout(card)
-        layout.setContentsMargins(16, 14, 16, 16)
-        layout.setSpacing(10)
-        return card, layout
-
-    @staticmethod
-    def _labeled_field(label_text, widget, tooltip=None):
-        row = QtWidgets.QHBoxLayout()
-        row.setSpacing(10)
-        label = QtWidgets.QLabel(label_text)
-        label.setObjectName('MissionFieldLabel')
-        label.setMinimumWidth(132)
-        label.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
-        if tooltip:
-            label.setToolTip(tooltip)
-            widget.setToolTip(tooltip)
-        row.addWidget(label)
-        row.addWidget(widget, 1)
-        return row
-
-    @staticmethod
-    def _vh_spinbox(min_val, max_val, step, decimals=2, tooltip=None):
-        spin = QtWidgets.QDoubleSpinBox()
-        spin.setRange(min_val, max_val)
-        spin.setSingleStep(step)
-        spin.setDecimals(decimals)
-        spin.setFixedWidth(88)
-        if tooltip:
-            spin.setToolTip(tooltip)
-        return MissionTab._value_with_unit(spin, 'vh')
-
-    @staticmethod
-    def _value_with_unit(widget, unit):
-        row = QtWidgets.QHBoxLayout()
-        row.setSpacing(6)
-        row.setContentsMargins(0, 0, 0, 0)
-        row.addWidget(widget)
-        unit_label = QtWidgets.QLabel(unit)
-        unit_label.setObjectName('MissionUnitLabel')
-        row.addWidget(unit_label)
-        row.addStretch()
-        wrapper = QtWidgets.QWidget()
-        wrapper.setLayout(row)
-        return wrapper, widget
 
     def _build_settings_tab(self):
         page_layout = QtWidgets.QVBoxLayout(self.tab_settings)
@@ -119,7 +51,7 @@ class MissionTab(QtWidgets.QWidget):
         header = QtWidgets.QVBoxLayout()
         header.setSpacing(4)
         self.la_description = QtWidgets.QLabel('Mission timeline overlay')
-        self.la_description.setObjectName('MissionPageTitle')
+        self.la_description.setObjectName('OverlayPageTitle')
         header.addWidget(self.la_description)
         header.addWidget(self._hint_label(
             'Configure where and how the live mission panel appears in-game. '
@@ -221,6 +153,14 @@ class MissionTab(QtWidgets.QWidget):
         visibility.addWidget(self.CH_ShowUpcoming)
         display_layout.addLayout(visibility)
 
+        self.SP_UpcomingCount = QtWidgets.QSpinBox()
+        self.SP_UpcomingCount.setRange(1, 3)
+        self.SP_UpcomingCount.setFixedWidth(88)
+        self.SP_UpcomingCount.setToolTip(
+            'How many upcoming events to show, including the NEXT line (1-3).')
+        display_layout.addLayout(self._labeled_field(
+            'Upcoming count', self.SP_UpcomingCount, self.SP_UpcomingCount.toolTip()))
+
         display_layout.addWidget(self._subsection_label('Typography'))
         font_next_wrap, self.SP_FontNext = self._vh_spinbox(
             0.5, 6.0, 0.05,
@@ -237,7 +177,7 @@ class MissionTab(QtWidgets.QWidget):
         page_layout.addLayout(columns)
 
         footer = QtWidgets.QFrame()
-        footer.setObjectName('MissionFooterBar')
+        footer.setObjectName('OverlayFooterBar')
         footer.setAutoFillBackground(True)
         footer.setFrameShape(QtWidgets.QFrame.StyledPanel)
         footer.setFrameShadow(QtWidgets.QFrame.Plain)
@@ -257,7 +197,7 @@ class MissionTab(QtWidgets.QWidget):
         difficulty_row = QtWidgets.QHBoxLayout()
         difficulty_row.setSpacing(10)
         difficulty_label = QtWidgets.QLabel('Overlay difficulty')
-        difficulty_label.setObjectName('MissionFieldLabel')
+        difficulty_label.setObjectName('OverlayFieldLabel')
         difficulty_label.setMinimumWidth(132)
         self.CB_OverlayDifficulty = QtWidgets.QComboBox()
         self.CB_OverlayDifficulty.addItems(['Auto', 'Casual', 'Normal', 'Hard', 'Brutal'])
@@ -280,11 +220,11 @@ class MissionTab(QtWidgets.QWidget):
         button_col = QtWidgets.QHBoxLayout()
         button_col.setSpacing(8)
         self.BT_Apply = QtWidgets.QPushButton('Apply')
-        self.BT_Apply.setObjectName('MissionPrimaryButton')
+        self.BT_Apply.setObjectName('OverlayPrimaryButton')
         self.BT_Apply.setMinimumWidth(88)
         self.BT_Apply.clicked.connect(self.p.saveSettings)
         self.CH_Preview = QtWidgets.QPushButton('Preview overlay')
-        self.CH_Preview.setObjectName('MissionSecondaryButton')
+        self.CH_Preview.setObjectName('OverlaySecondaryButton')
         self.CH_Preview.setCheckable(True)
         self.CH_Preview.setMinimumWidth(120)
         self.CH_Preview.setToolTip('Show a sample mission panel on the overlay to test placement.')

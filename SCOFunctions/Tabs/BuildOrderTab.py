@@ -5,9 +5,19 @@ from PyQt5 import QtCore, QtWidgets
 from SCOFunctions.BuildOrderStore import commander_names
 from SCOFunctions.CommanderOCR import commander_display_name
 from SCOFunctions.SC2Dictionaries.BuildOrders import build_orders_defaults
+from SCOFunctions.Tabs import OverlayTabShared
 
 
 class BuildOrderTab(QtWidgets.QWidget):
+    # Shared layout helpers (also used by MissionTab)
+    _hint_label = staticmethod(OverlayTabShared.hint_label)
+    _subsection_label = staticmethod(OverlayTabShared.subsection_label)
+    _section_title = staticmethod(OverlayTabShared.section_title)
+    _section_card = staticmethod(OverlayTabShared.section_card)
+    _labeled_field = staticmethod(OverlayTabShared.labeled_field)
+    _vh_spinbox = staticmethod(OverlayTabShared.vh_spinbox)
+    _value_with_unit = staticmethod(OverlayTabShared.value_with_unit)
+
     def __init__(self, parent):
         super().__init__()
         self.p = parent
@@ -22,87 +32,10 @@ class BuildOrderTab(QtWidgets.QWidget):
         self.tab_editor = QtWidgets.QWidget()
         self.sub_tabs.addTab(self.tab_settings, 'Appearance')
         self.sub_tabs.addTab(self.tab_editor, 'Build Orders')
-        self.sub_tabs.setObjectName('BuildOrderSubTabs')
+        self.sub_tabs.setObjectName('OverlaySubTabs')
 
         self._build_settings_tab()
         self._build_editor_tab()
-
-    @staticmethod
-    def _hint_label(text):
-        label = QtWidgets.QLabel(text)
-        label.setWordWrap(True)
-        label.setObjectName('MissionHintLabel')
-        return label
-
-    @staticmethod
-    def _subsection_label(text):
-        label = QtWidgets.QLabel(text)
-        label.setObjectName('MissionSubsectionLabel')
-        return label
-
-    @staticmethod
-    def _section_title(text, subtitle=None):
-        block = QtWidgets.QVBoxLayout()
-        block.setSpacing(2)
-        block.setContentsMargins(0, 0, 0, 0)
-        title = QtWidgets.QLabel(text)
-        title.setObjectName('MissionSectionTitle')
-        block.addWidget(title)
-        if subtitle:
-            block.addWidget(BuildOrderTab._hint_label(subtitle))
-        return block
-
-    @staticmethod
-    def _section_card():
-        card = QtWidgets.QFrame()
-        card.setObjectName('MissionSectionCard')
-        card.setAutoFillBackground(True)
-        card.setFrameShape(QtWidgets.QFrame.StyledPanel)
-        card.setFrameShadow(QtWidgets.QFrame.Plain)
-        layout = QtWidgets.QVBoxLayout(card)
-        layout.setContentsMargins(16, 14, 16, 16)
-        layout.setSpacing(10)
-        return card, layout
-
-    @staticmethod
-    def _labeled_field(label_text, widget, tooltip=None):
-        row = QtWidgets.QHBoxLayout()
-        row.setSpacing(10)
-        label = QtWidgets.QLabel(label_text)
-        label.setObjectName('MissionFieldLabel')
-        label.setMinimumWidth(132)
-        label.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
-        if tooltip:
-            label.setToolTip(tooltip)
-            widget.setToolTip(tooltip)
-        row.addWidget(label)
-        row.addWidget(widget, 1)
-        return row
-
-    @staticmethod
-    def _vh_spinbox(min_val, max_val, step, decimals=2, tooltip=None):
-        spin = QtWidgets.QDoubleSpinBox()
-        spin.setRange(min_val, max_val)
-        spin.setSingleStep(step)
-        spin.setDecimals(decimals)
-        spin.setFixedWidth(88)
-        if tooltip:
-            spin.setToolTip(tooltip)
-        return BuildOrderTab._value_with_unit(spin, 'vh')
-
-    @staticmethod
-    def _value_with_unit(widget, unit):
-        row = QtWidgets.QHBoxLayout()
-        row.setSpacing(6)
-        row.setContentsMargins(0, 0, 0, 0)
-        row.addWidget(widget)
-        unit_label = QtWidgets.QLabel(unit)
-        unit_label.setObjectName('MissionUnitLabel')
-        row.addWidget(unit_label)
-        row.addStretch()
-        wrapper = QtWidgets.QWidget()
-        wrapper.setLayout(row)
-        return wrapper, widget
 
     def _build_settings_tab(self):
         scroll = QtWidgets.QScrollArea()
@@ -123,7 +56,7 @@ class BuildOrderTab(QtWidgets.QWidget):
         header = QtWidgets.QVBoxLayout()
         header.setSpacing(4)
         self.la_description = QtWidgets.QLabel('Build order overlay')
-        self.la_description.setObjectName('MissionPageTitle')
+        self.la_description.setObjectName('OverlayPageTitle')
         header.addWidget(self.la_description)
         header.addWidget(self._hint_label(
             'Shows your commander build order on the left during the first few minutes of a game. '
@@ -227,7 +160,7 @@ class BuildOrderTab(QtWidgets.QWidget):
         page_layout.addLayout(columns)
 
         footer = QtWidgets.QFrame()
-        footer.setObjectName('MissionFooterBar')
+        footer.setObjectName('OverlayFooterBar')
         footer.setAutoFillBackground(True)
         footer.setFrameShape(QtWidgets.QFrame.StyledPanel)
         footer.setFrameShadow(QtWidgets.QFrame.Plain)
@@ -254,11 +187,11 @@ class BuildOrderTab(QtWidgets.QWidget):
         button_row = QtWidgets.QHBoxLayout()
         button_row.setSpacing(8)
         self.BT_TestOcr = QtWidgets.QPushButton('Test detection')
-        self.BT_TestOcr.setObjectName('MissionSecondaryButton')
+        self.BT_TestOcr.setObjectName('OverlaySecondaryButton')
         self.BT_TestOcr.setToolTip('Open the co-op lobby (commander selection) screen, then click this to test detection.')
         self.BT_TestOcr.clicked.connect(self.p.test_build_order_ocr)
         self.LA_OcrResult = QtWidgets.QLabel('')
-        self.LA_OcrResult.setObjectName('MissionHintLabel')
+        self.LA_OcrResult.setObjectName('OverlayHintLabel')
         button_row.addWidget(self.BT_TestOcr)
         button_row.addWidget(self.LA_OcrResult, 1)
         footer_layout.addLayout(button_row)
@@ -266,11 +199,11 @@ class BuildOrderTab(QtWidgets.QWidget):
         action_row = QtWidgets.QHBoxLayout()
         action_row.setSpacing(8)
         self.BT_Apply = QtWidgets.QPushButton('Apply')
-        self.BT_Apply.setObjectName('MissionPrimaryButton')
+        self.BT_Apply.setObjectName('OverlayPrimaryButton')
         self.BT_Apply.setMinimumWidth(88)
         self.BT_Apply.clicked.connect(self.p.saveSettings)
         self.CH_Preview = QtWidgets.QPushButton('Preview overlay')
-        self.CH_Preview.setObjectName('MissionSecondaryButton')
+        self.CH_Preview.setObjectName('OverlaySecondaryButton')
         self.CH_Preview.setCheckable(True)
         self.CH_Preview.setMinimumWidth(120)
         self.CH_Preview.setToolTip('Show a sample build order panel on the overlay.')
@@ -325,10 +258,10 @@ class BuildOrderTab(QtWidgets.QWidget):
         buttons = QtWidgets.QHBoxLayout()
         buttons.setSpacing(8)
         self.BT_SaveBuildOrder = QtWidgets.QPushButton('Save build order')
-        self.BT_SaveBuildOrder.setObjectName('MissionPrimaryButton')
+        self.BT_SaveBuildOrder.setObjectName('OverlayPrimaryButton')
         self.BT_SaveBuildOrder.clicked.connect(self.p.save_build_order_editor)
         self.BT_ResetCustom = QtWidgets.QPushButton('Clear custom')
-        self.BT_ResetCustom.setObjectName('MissionSecondaryButton')
+        self.BT_ResetCustom.setObjectName('OverlaySecondaryButton')
         self.BT_ResetCustom.clicked.connect(self.p.reset_build_order_custom)
         buttons.addWidget(self.BT_SaveBuildOrder)
         buttons.addWidget(self.BT_ResetCustom)

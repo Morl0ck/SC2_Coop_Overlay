@@ -3,11 +3,16 @@ Click-triggered OCR of the co-op lobby selection screen.
 
 Instead of repeatedly OCR-ing the in-game UI (unreliable - it often reads the
 ally), this watches for the user clicking on the co-op commander selection
-screen and, one second after the last click (debounced), captures three regions:
+screen and, shortly after the last click (trailing-edge debounce of
+``DEBOUNCE_SECONDS``), captures three regions:
 
     * commander name   (red box in the reference screenshot)
     * prestige title   (yellow box)
     * difficulty       (green box)
+
+Regions are computed relative to the StarCraft II window's client rect when it
+can be resolved (works in windowed mode and on any monitor), falling back to
+fractions of the configured monitor otherwise.
 
 The most recent reading is cached in ``SELECTION`` and consumed by the build
 order tracker (commander) and mission tracker (difficulty) when a game starts.
@@ -18,11 +23,13 @@ foreground window and we are NOT already in a game.
 from __future__ import annotations
 
 import ctypes
+import ctypes.wintypes
 import difflib
+import os
 import threading
 import time
 import traceback
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
 from SCOFunctions.CommanderOCR import (
     _canonical_commanders,
@@ -31,6 +38,7 @@ from SCOFunctions.CommanderOCR import (
     _ocr_image_to_text,
     commander_display_name,
     grab_screen_region,
+    grab_screen_regions,
 )
 from SCOFunctions.MLogging import Logger
 from SCOFunctions.SC2Dictionaries import DIFFICULTIES, prestige_names
@@ -38,19 +46,21 @@ from SCOFunctions.Settings import Setting_manager as SM
 
 logger = Logger('OCR', Logger.levels.INFO)
 
-# Seconds to wait after the last click before running detection.
+# Seconds to wait after the *last* click before running detection.
 DEBOUNCE_SECONDS = 0.5
 # Ignore lobby readings left behind for an unusually long time.
 SELECTION_MAX_AGE_SECONDS = 30 * 60
 
-# Screen regions as (left, top, right, bottom) fractions of the captured
-# monitor. Calibrated from the co-op lobby on a 16:9 display; they scale with
-# resolution as long as the aspect ratio is 16:9.
+# Screen regions as (left, top, right, bottom) fractions of the SC2 client
+# area (or of the captured monitor in the fallback path). Calibrated from the
+# co-op lobby on a 16:9 display.
 DEFAULT_REGIONS: Dict[str, tuple] = {
     'commander': (0.010, 0.420, 0.330, 0.510),
     'prestige': (0.135, 0.548, 0.560, 0.612),
     'difficulty': (0.290, 0.835, 0.450, 0.930),
 }
+
+PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
 
 
 def _regions() -> Dict[str, tuple]:
@@ -64,19 +74,72 @@ def _regions() -> Dict[str, tuple]:
     return DEFAULT_REGIONS
 
 
-def sc2_is_foreground() -> bool:
-    """True when the focused window looks like the StarCraft II client."""
+def _ocr_debug_enabled() -> bool:
+    return bool(SM.settings.get('build_orders', {}).get('ocr_debug', False))
+
+
+def _window_process_is_sc2(hwnd) -> bool:
+    """Check the window's process executable to weed out impostor windows
+    (a browser tab or folder titled 'StarCraft II' would pass the title check)."""
+    try:
+        user32 = ctypes.windll.user32
+        kernel32 = ctypes.windll.kernel32
+        pid = ctypes.wintypes.DWORD()
+        user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+        if not pid.value:
+            return True
+        handle = kernel32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid.value)
+        if not handle:
+            # Can't inspect the process (permissions); trust the title check.
+            return True
+        try:
+            buffer = ctypes.create_unicode_buffer(1024)
+            size = ctypes.wintypes.DWORD(1024)
+            if kernel32.QueryFullProcessImageNameW(handle, 0, buffer, ctypes.byref(size)):
+                exe = os.path.basename(buffer.value).lower()
+                return exe.startswith('sc2')
+            return True
+        finally:
+            kernel32.CloseHandle(handle)
+    except Exception:
+        return True
+
+
+def sc2_foreground_client_rect() -> Optional[Tuple[int, int, int, int]]:
+    """``(left, top, width, height)`` of the SC2 client area in screen pixels,
+    or None when the foreground window isn't the StarCraft II client."""
     try:
         user32 = ctypes.windll.user32
         hwnd = user32.GetForegroundWindow()
         if not hwnd:
-            return False
+            return None
         length = user32.GetWindowTextLengthW(hwnd)
         buffer = ctypes.create_unicode_buffer(length + 1)
         user32.GetWindowTextW(hwnd, buffer, length + 1)
-        return 'StarCraft II' in buffer.value
+        if 'StarCraft II' not in buffer.value:
+            return None
+        if not _window_process_is_sc2(hwnd):
+            return None
+
+        rect = ctypes.wintypes.RECT()
+        if not user32.GetClientRect(hwnd, ctypes.byref(rect)):
+            return None
+        origin = ctypes.wintypes.POINT(0, 0)
+        if not user32.ClientToScreen(hwnd, ctypes.byref(origin)):
+            return None
+        width = rect.right - rect.left
+        height = rect.bottom - rect.top
+        # A minimized/degenerate window is useless for OCR.
+        if width < 200 or height < 200:
+            return None
+        return (origin.x, origin.y, width, height)
     except Exception:
-        return False
+        return None
+
+
+def sc2_is_foreground() -> bool:
+    """True when the focused window is the StarCraft II client."""
+    return sc2_foreground_client_rect() is not None
 
 
 def _match_prestige(commander: str, text: str) -> Optional[Dict[str, Any]]:
@@ -102,9 +165,9 @@ def _match_prestige(commander: str, text: str) -> Optional[Dict[str, Any]]:
 def _commander_from_prestige(text: str) -> Optional[Dict[str, Any]]:
     """Infer the commander from the prestige title alone.
 
-    The commander-name region OCR is flaky (it sometimes reads empty), but the
-    prestige titles are unique across all commanders, so a confident prestige
-    match doubles as a commander identification.
+    The commander-name region OCR can read empty, but the prestige titles are
+    unique across all commanders, so a confident prestige match doubles as a
+    commander identification.
     """
     norm = _normalize_text(text)
     if not norm:
@@ -148,72 +211,107 @@ def _match_difficulty(text: str) -> Optional[str]:
     return best if best_score >= 0.7 else None
 
 
+def _capture_region_images(monitor: Optional[int] = None) -> Optional[Dict[str, Any]]:
+    """Capture the three region crops.
+
+    Prefers grabbing only the small region bboxes relative to the SC2 client
+    rect (cheap, windowed-mode/multi-monitor safe). Falls back to capturing
+    the configured monitor and cropping by fractions.
+    """
+    regions = _regions()
+
+    rect = sc2_foreground_client_rect()
+    if rect:
+        left0, top0, win_w, win_h = rect
+        bboxes = {}
+        for name, (left, top, right, bottom) in regions.items():
+            bboxes[name] = (
+                left0 + int(left * win_w),
+                top0 + int(top * win_h),
+                max(1, int((right - left) * win_w)),
+                max(1, int((bottom - top) * win_h)),
+            )
+        images = grab_screen_regions(bboxes)
+        if images:
+            return {'images': images, 'capture': f'SC2 window {win_w}x{win_h}'}
+
+    image = grab_screen_region(monitor)
+    if image is None:
+        return None
+    width, height = image.size
+    images = {}
+    for name, (left, top, right, bottom) in regions.items():
+        images[name] = image.crop((int(left * width), int(top * height), int(right * width), int(bottom * height)))
+    return {'images': images, 'capture': f'monitor {width}x{height}'}
+
+
 def detect_selection(monitor: Optional[int] = None, log_regions: bool = False) -> Optional[Dict[str, Any]]:
     """Capture and OCR the selection-screen regions.
 
-    Returns ``{'commander', 'prestige', 'difficulty', 'score'}`` or ``None`` if
-    the commander region doesn't confidently read a commander name (which also
-    means we're probably not on the lobby screen).
+    Returns ``{'commander', 'prestige', 'difficulty', 'score'}`` or ``None``
+    when neither the commander region nor the prestige region reads anything
+    recognisable (which also means we're probably not on the lobby screen).
 
-    When ``log_regions`` is True the raw OCR text of each region is logged - use
-    this to calibrate the region coordinates.
+    OCR is short-circuited: the commander region is read first, the prestige
+    region only when needed, and the difficulty region only once a commander
+    was identified - clicking around regular menus costs one Tesseract call,
+    not three.
+
+    When ``log_regions`` is True the raw OCR text of each region is logged -
+    use this to calibrate the region coordinates.
     """
-    image = grab_screen_region(monitor)
-    if image is None:
+    captured = _capture_region_images(monitor)
+    if captured is None:
         if log_regions:
             logger.info('Selection OCR: screen capture returned nothing (check the "monitor" setting)')
         return None
 
-    width, height = image.size
-    regions = _regions()
+    images = captured['images']
+    raw_texts: Dict[str, str] = {}
 
-    def crop(name: str):
-        left, top, right, bottom = regions[name]
-        return image.crop((int(left * width), int(top * height), int(right * width), int(bottom * height)))
+    def log_raw():
+        if log_regions:
+            parts = ' '.join(f'{name}={text.strip()!r}' for name, text in raw_texts.items())
+            logger.info(f"Selection OCR regions ({captured['capture']}): {parts}")
 
-    commander_raw = _ocr_image_to_text(crop('commander'))
-    prestige_raw = _ocr_image_to_text(crop('prestige'))
-    difficulty_raw = _ocr_image_to_text(crop('difficulty'))
-
-    if log_regions:
-        logger.info(
-            f'Selection OCR regions (capture {width}x{height}): '
-            f'commander={commander_raw.strip()!r} '
-            f'prestige={prestige_raw.strip()!r} '
-            f'difficulty={difficulty_raw.strip()!r}'
-        )
-
-    difficulty = _match_difficulty(difficulty_raw)
-
+    commander_raw = _ocr_image_to_text(images['commander'])
+    raw_texts['commander'] = commander_raw
     commander_match = _match_in_text(commander_raw, _canonical_commanders())
-    if commander_match:
-        commander = commander_match[0]
-        return {
-            'commander': commander,
-            'prestige': _match_prestige(commander, prestige_raw),
-            'difficulty': difficulty,
-            'score': commander_match[1],
-        }
 
-    # Commander-name region failed to read (it's flaky). Fall back to inferring
-    # the commander from the prestige title, which is unique per commander.
-    fallback = _commander_from_prestige(prestige_raw)
-    if fallback:
+    if commander_match:
+        commander, score = commander_match
+        prestige_raw = _ocr_image_to_text(images['prestige'])
+        raw_texts['prestige'] = prestige_raw
+        prestige = _match_prestige(commander, prestige_raw)
+    else:
+        # Commander-name region failed to read. Fall back to inferring the
+        # commander from the prestige title, which is unique per commander.
+        prestige_raw = _ocr_image_to_text(images['prestige'])
+        raw_texts['prestige'] = prestige_raw
+        fallback = _commander_from_prestige(prestige_raw)
+        if not fallback:
+            log_raw()
+            return None
+        commander = fallback['commander']
         prestige = fallback['prestige']
+        score = prestige['score']
         if log_regions:
             logger.info(
                 f"Selection OCR: commander region unreadable; inferred "
-                f"{commander_display_name(fallback['commander'])} from prestige "
-                f"'{prestige['title']}'"
+                f"{commander_display_name(commander)} from prestige '{prestige['title']}'"
             )
-        return {
-            'commander': fallback['commander'],
-            'prestige': prestige,
-            'difficulty': difficulty,
-            'score': prestige['score'],
-        }
 
-    return None
+    difficulty_raw = _ocr_image_to_text(images['difficulty'])
+    raw_texts['difficulty'] = difficulty_raw
+    difficulty = _match_difficulty(difficulty_raw)
+    log_raw()
+
+    return {
+        'commander': commander,
+        'prestige': prestige,
+        'difficulty': difficulty,
+        'score': score,
+    }
 
 
 class _SelectionState:
@@ -249,6 +347,7 @@ _timer: Optional[threading.Timer] = None
 _timer_lock = threading.Lock()
 _in_game = False
 _hooked = False
+_hook_handle = None
 _click_seen = False
 # Throttle for the "click ignored" diagnostic so a game's worth of clicks
 # doesn't flood the log; we still want to see *why* clicks are dropped.
@@ -263,18 +362,17 @@ def set_in_game(flag: bool) -> None:
 
 
 def _run_detection() -> None:
-    # Free the slot so a click during/after this run can schedule the next one.
     global _timer
     with _timer_lock:
         _timer = None
     try:
         foreground = sc2_is_foreground()
         if _in_game or not foreground:
-            logger.info(f'Selection OCR skipped (in_game={_in_game}, sc2_foreground={foreground})')
+            logger.debug(f'Selection OCR skipped (in_game={_in_game}, sc2_foreground={foreground})')
             return
-        result = detect_selection(log_regions=True)
+        result = detect_selection(log_regions=_ocr_debug_enabled())
         if not result:
-            logger.info('Selection OCR: no commander recognised in the commander region (calibration may be off)')
+            logger.debug('Selection OCR: nothing recognised (not the lobby screen, or calibration is off)')
             return
         SELECTION.update(result)
         prestige = result.get('prestige')
@@ -298,39 +396,34 @@ def _on_click() -> None:
 
         foreground = sc2_is_foreground()
         if _in_game or not foreground:
-            # This used to drop the click silently, which made "only one
-            # detection" impossible to diagnose. Log (throttled) the reason so
-            # we can see whether the live-game gate or the foreground check is
-            # eating the clicks.
             global _last_skip_log
             now = time.time()
             if now - _last_skip_log >= _SKIP_LOG_INTERVAL:
                 _last_skip_log = now
-                logger.info(
+                logger.debug(
                     'Selection watcher: click ignored '
                     f'(in_game={_in_game}, sc2_foreground={foreground})'
                 )
             return
         global _timer
         with _timer_lock:
-            # Throttle, not debounce: if a detection is already pending, let it
-            # run. A burst of fast clicks collapses into one detection that
-            # captures whatever is selected ~1s later (i.e. your final choice).
-            if _timer is not None and _timer.is_alive():
-                logger.info('Selection watcher: click (detection already pending, throttled)')
-                return
+            # Trailing-edge debounce: each click cancels any pending detection
+            # and re-arms the timer, so the capture always happens
+            # DEBOUNCE_SECONDS after the *last* click and reads the final
+            # selection (never a mid-burst or mid-animation frame).
+            if _timer is not None:
+                _timer.cancel()
             _timer = threading.Timer(DEBOUNCE_SECONDS, _run_detection)
             _timer.daemon = True
             _timer.start()
-            logger.info('Selection watcher: click -> detection scheduled in '
-                        f'{DEBOUNCE_SECONDS:g}s')
+        logger.debug(f'Selection watcher: click -> detection in {DEBOUNCE_SECONDS:g}s')
     except Exception:
         logger.error(f'Selection watcher click handler failed:\n{traceback.format_exc()}')
 
 
 def start_watcher() -> None:
     """Register the global left-click hook (idempotent)."""
-    global _hooked
+    global _hooked, _hook_handle
     if _hooked:
         return
     try:
@@ -339,7 +432,8 @@ def start_watcher() -> None:
         logger.error('mouse package not installed; click-triggered OCR disabled')
         return
     try:
-        mouse.on_click(_on_click)
+        # on_click returns the internal handler; keep it for a targeted unhook.
+        _hook_handle = mouse.on_click(_on_click)
         _hooked = True
         logger.info('Commander selection watcher started (click-triggered OCR)')
     except Exception:
@@ -347,7 +441,7 @@ def start_watcher() -> None:
 
 
 def stop_watcher() -> None:
-    global _hooked, _timer
+    global _hooked, _hook_handle, _timer
     with _timer_lock:
         if _timer is not None:
             _timer.cancel()
@@ -356,7 +450,11 @@ def stop_watcher() -> None:
         return
     try:
         import mouse
-        mouse.unhook_all()
+        if _hook_handle is not None:
+            mouse.unhook(_hook_handle)
+        else:
+            mouse.unhook_all()
     except Exception:
         pass
+    _hook_handle = None
     _hooked = False

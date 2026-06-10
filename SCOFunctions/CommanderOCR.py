@@ -1,8 +1,11 @@
 """
-Screen OCR to detect the local player's commander at co-op game start.
+Shared OCR primitives for reading the co-op lobby selection screen.
 
-Uses a thread-safe screen capture (mss) and Tesseract via pytesseract.
-Commander names are fuzzy-matched against bundled prestige_names keys.
+Provides thread-safe screen capture (mss), Tesseract via pytesseract with
+image preprocessing tuned for SC2's light-text-on-dark UI, and fuzzy matching
+of commander names against bundled prestige_names keys.
+
+The actual selection-screen detection lives in `CommanderSelection`.
 """
 from __future__ import annotations
 
@@ -10,7 +13,6 @@ import difflib
 import os
 import re
 import shutil
-import time
 import traceback
 from typing import Dict, List, Optional, Sequence, Tuple
 
@@ -22,8 +24,6 @@ logger = Logger('OCR', Logger.levels.INFO)
 
 # Minimum difflib ratio to accept a fuzzy commander match.
 CONFIDENCE_THRESHOLD = 0.85
-# Lock immediately when we see a near-exact match.
-HIGH_CONFIDENCE = 0.95
 
 # OCR aliases -> canonical prestige_names key.
 COMMANDER_ALIASES: Dict[str, str] = {
@@ -41,7 +41,14 @@ DISPLAY_NAMES: Dict[str, str] = {
     'Horner': 'Han & Horner',
 }
 
-_tesseract_configured = False
+# Tri-state: None = not checked yet, True/False = cached result. A negative
+# result is cached too, so a missing Tesseract install doesn't re-run path
+# discovery and re-log an error on every OCR call.
+_tesseract_available: Optional[bool] = None
+
+# Cap the longest preprocessed edge so upscaling small crops can't blow up
+# into huge images on high-resolution monitors.
+_MAX_OCR_EDGE = 4000
 
 
 def commander_display_name(commander: str) -> str:
@@ -59,17 +66,19 @@ def _alias_targets() -> Dict[str, str]:
 
 
 def _configure_tesseract() -> bool:
-    global _tesseract_configured
-    if _tesseract_configured:
-        return True
+    global _tesseract_available
+    if _tesseract_available is not None:
+        return _tesseract_available
+
     try:
         import pytesseract
     except ImportError:
-        logger.error('pytesseract is not installed')
+        logger.error('pytesseract is not installed; OCR disabled')
+        _tesseract_available = False
         return False
 
     if shutil.which('tesseract'):
-        _tesseract_configured = True
+        _tesseract_available = True
         return True
 
     for candidate in (
@@ -78,10 +87,11 @@ def _configure_tesseract() -> bool:
     ):
         if os.path.isfile(candidate):
             pytesseract.pytesseract.tesseract_cmd = candidate
-            _tesseract_configured = True
+            _tesseract_available = True
             return True
 
-    logger.error('Tesseract executable not found in PATH or default install locations')
+    logger.error('Tesseract executable not found in PATH or default install locations; OCR disabled')
+    _tesseract_available = False
     return False
 
 
@@ -118,12 +128,64 @@ def grab_screen_region(monitor_index: Optional[int] = None) -> Optional['Image.I
         return None
 
 
-def _ocr_image_to_text(image) -> str:
+def grab_screen_regions(bboxes: Dict[str, Tuple[int, int, int, int]]) -> Optional[Dict[str, 'Image.Image']]:
+    """Capture several small screen regions in one mss session.
+
+    ``bboxes`` maps a name to ``(left, top, width, height)`` in absolute screen
+    pixels. Much cheaper than grabbing a full monitor and cropping when only a
+    few small regions are needed.
+    """
+    try:
+        import mss
+    except ImportError:
+        logger.error('mss/Pillow not installed for screen capture')
+        return None
+
+    try:
+        with mss.mss() as sct:
+            out = {}
+            for name, (left, top, width, height) in bboxes.items():
+                shot = sct.grab({'left': left, 'top': top, 'width': width, 'height': height})
+                out[name] = _screenshot_to_image(shot)
+            return out
+    except Exception:
+        logger.error(f'Screen capture failed:\n{traceback.format_exc()}')
+        return None
+
+
+def _preprocess_for_ocr(image):
+    """Prepare a UI crop for Tesseract.
+
+    SC2 renders light text on a dark, textured background - Tesseract's worst
+    case. Upscale (small UI text), grayscale, and invert to dark-on-light so
+    Tesseract's internal binarization gets a clean input.
+    """
+    from PIL import Image, ImageOps, ImageStat
+
+    gray = ImageOps.grayscale(image)
+    width, height = gray.size
+    if not width or not height:
+        return gray
+
+    longest = max(width, height)
+    scale = 3 if longest * 3 <= _MAX_OCR_EDGE else max(1, _MAX_OCR_EDGE // longest)
+    if scale > 1:
+        resample = getattr(Image, 'Resampling', Image).LANCZOS
+        gray = gray.resize((width * scale, height * scale), resample)
+
+    if ImageStat.Stat(gray).mean[0] < 128:
+        gray = ImageOps.invert(gray)
+
+    return ImageOps.autocontrast(gray)
+
+
+def _ocr_image_to_text(image, psm: int = 7) -> str:
+    """OCR a region crop. ``psm`` defaults to 7 (single text line)."""
     if not _configure_tesseract():
         return ''
     try:
         import pytesseract
-        return pytesseract.image_to_string(image, config='--psm 6')
+        return pytesseract.image_to_string(_preprocess_for_ocr(image), config=f'--psm {psm}')
     except Exception:
         logger.error(f'OCR failed:\n{traceback.format_exc()}')
         return ''
@@ -144,8 +206,9 @@ def _match_in_text(text: str, candidates: Sequence[str]) -> Optional[Tuple[str, 
     best_score = 0.0
     normalized = _normalize_text(text)
 
+    # Word-bounded exact alias hit ('nova' must not match inside another word).
     for alias, canonical in aliases.items():
-        if alias in normalized:
+        if re.search(r'\b' + re.escape(alias) + r'\b', normalized):
             return canonical, 1.0
 
     tokens = normalized.split()
@@ -172,58 +235,4 @@ def _match_in_text(text: str, candidates: Sequence[str]) -> Optional[Tuple[str, 
 
     if best_name and best_score >= CONFIDENCE_THRESHOLD:
         return best_name, best_score
-    return None
-
-
-def _region_for_player(image, player_position: int):
-    """Crop to left or right half to disambiguate ally vs local commander text."""
-    width, height = image.size
-    if player_position == 2:
-        return image.crop((width // 2, 0, width, height))
-    return image.crop((0, 0, width // 2, height))
-
-
-def detect_commander_once(player_position: int = 1) -> Optional[Tuple[str, float]]:
-    """Single capture + OCR attempt. Returns (commander, score) or None."""
-    image = grab_screen_region()
-    if image is None:
-        return None
-
-    candidates = _canonical_commanders()
-
-    # Prefer the local player's screen half — full-screen OCR often picks the ally.
-    player_text = _ocr_image_to_text(_region_for_player(image, player_position))
-    player_match = _match_in_text(player_text, candidates)
-    if player_match:
-        logger.info(f'OCR detected commander: {player_match[0]} (score={player_match[1]:.2f}, player side)')
-        return player_match
-
-    full_text = _ocr_image_to_text(image)
-    full_match = _match_in_text(full_text, candidates)
-    if full_match:
-        logger.info(f'OCR detected commander: {full_match[0]} (score={full_match[1]:.2f}, full screen fallback)')
-        return full_match
-    return None
-
-
-def detect_commander_name(player_position: int = 1) -> Optional[str]:
-    """Convenience wrapper returning only the commander name."""
-    match = detect_commander_once(player_position)
-    return match[0] if match else None
-
-
-def detect_commander(
-    player_position: int = 1,
-    *,
-    retries: int = 5,
-    retry_delay: float = 3.0,
-) -> Optional[str]:
-    """Retry OCR over several seconds to catch the loading screen."""
-    for attempt in range(max(1, retries)):
-        match = detect_commander_once(player_position)
-        if match:
-            return match[0]
-        if attempt < retries - 1:
-            time.sleep(retry_delay)
-    logger.info('OCR could not detect commander confidently')
     return None
