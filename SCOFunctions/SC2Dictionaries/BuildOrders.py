@@ -114,11 +114,10 @@ build_orders_defaults = {
         'source_date': '2026-06-08',
         'steps': [
             '13 Bunker Calldown at Expo',
-            '16 laborers on Main',
-            '24 Bunker keeping',
+            '24 Bunker keeping 16 laborers on Main',
             '25 Unload expo bunker + clear rocks',
             '28 4 Laborers -> Expo',
-            '30 Enlistment Center',
+            '30 Enlistment Center (4 Laborers)',
             '32 Troopers to Laborers to fast-build expo',
             '32 Bunker Calldown, Unload to Laborer',
             '38 Refinery (3 Laborers)',

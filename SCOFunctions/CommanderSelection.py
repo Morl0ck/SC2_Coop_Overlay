@@ -26,6 +26,7 @@ import ctypes
 import ctypes.wintypes
 import difflib
 import os
+import re
 import threading
 import time
 import traceback
@@ -142,19 +143,35 @@ def sc2_is_foreground() -> bool:
     return sc2_foreground_client_rect() is not None
 
 
+def _prestige_text_score(title: str, text: str) -> float:
+    """Score a title against OCR text that may contain surrounding UI noise."""
+    expected = _normalize_text(title)
+    observed = _normalize_text(text)
+    if not expected or not observed:
+        return 0.0
+
+    best = difflib.SequenceMatcher(None, expected, observed).ratio()
+    if expected in observed:
+        best = max(best, 0.95)
+    if len(observed) >= max(4, len(expected) // 2) and observed in expected:
+        best = max(best, 0.9)
+
+    words = observed.split()
+    target_words = len(expected.split())
+    for size in range(max(1, target_words - 1), target_words + 2):
+        for start in range(max(0, len(words) - size + 1)):
+            window = ' '.join(words[start:start + size])
+            best = max(best, difflib.SequenceMatcher(None, expected, window).ratio())
+    return best
+
+
 def _match_prestige(commander: str, text: str) -> Optional[Dict[str, Any]]:
-    norm = _normalize_text(text)
-    if not norm:
+    if not _normalize_text(text):
         return None
     titles = prestige_names.get(commander, {})
     best_idx, best_title, best_score = None, None, 0.0
     for idx, title in titles.items():
-        normalized_title = _normalize_text(title)
-        if not normalized_title:
-            continue
-        score = difflib.SequenceMatcher(None, normalized_title, norm).ratio()
-        if normalized_title in norm or norm in normalized_title:
-            score = max(score, 0.9)
+        score = _prestige_text_score(title, text)
         if score > best_score:
             best_idx, best_title, best_score = idx, title, score
     if best_title and best_score >= 0.6:
@@ -169,18 +186,12 @@ def _commander_from_prestige(text: str) -> Optional[Dict[str, Any]]:
     unique across all commanders, so a confident prestige match doubles as a
     commander identification.
     """
-    norm = _normalize_text(text)
-    if not norm:
+    if not _normalize_text(text):
         return None
     best = None  # (commander, index, title, score)
     for commander, titles in prestige_names.items():
         for idx, title in titles.items():
-            normalized_title = _normalize_text(title)
-            if not normalized_title:
-                continue
-            score = difflib.SequenceMatcher(None, normalized_title, norm).ratio()
-            if normalized_title in norm or norm in normalized_title:
-                score = max(score, 0.9)
+            score = _prestige_text_score(title, text)
             if best is None or score > best[3]:
                 best = (commander, idx, title, score)
     # Require a fairly strong match: a wrong commander is worse than none.
@@ -192,10 +203,33 @@ def _commander_from_prestige(text: str) -> Optional[Dict[str, Any]]:
     return None
 
 
+def _ocr_prestige(image, commander: Optional[str] = None) -> Tuple[Optional[Dict[str, Any]], str]:
+    """Read a prestige title in block mode, then retry as a single line."""
+    matcher = (
+        (lambda text: _match_prestige(commander, text))
+        if commander
+        else _commander_from_prestige
+    )
+
+    raw = _ocr_image_to_text(image, psm=6)
+    match = matcher(raw)
+    if match:
+        return match, raw
+
+    retry_raw = _ocr_image_to_text(image, psm=7)
+    match = matcher(retry_raw)
+    combined = '\n'.join(part for part in (raw, retry_raw) if part)
+    return match, combined
+
+
 def _match_difficulty(text: str) -> Optional[str]:
     # Check the raw text for a Brutal+ marker first - normalization strips '+'.
     raw = (text or '').lower()
     if 'brutal' in raw or 'b+' in raw.replace(' ', ''):
+        return 'Brutal'
+    # The difficulty crop also includes the bonus line. On Brutal, that line is
+    # consistently easier for Tesseract to read than the selected button.
+    if re.search(r'\bbonus\s*xp\W*100\s*%?', raw):
         return 'Brutal'
     norm = _normalize_text(text)
     if not norm:
@@ -209,6 +243,20 @@ def _match_difficulty(text: str) -> Optional[str]:
         if score > best_score:
             best, best_score = name, score
     return best if best_score >= 0.7 else None
+
+
+def _ocr_difficulty(image) -> Tuple[Optional[str], str]:
+    """Read the two-line difficulty block, then retry only its top line."""
+    raw = _ocr_image_to_text(image, psm=6)
+    difficulty = _match_difficulty(raw)
+    if difficulty:
+        return difficulty, raw
+
+    width, height = image.size
+    focused = image.crop((0, 0, width, max(1, int(height * 0.62))))
+    focused_raw = _ocr_image_to_text(focused, psm=7)
+    combined = '\n'.join(part for part in (raw, focused_raw) if part)
+    return _match_difficulty(combined), combined
 
 
 def _capture_region_images(monitor: Optional[int] = None) -> Optional[Dict[str, Any]]:
@@ -280,15 +328,13 @@ def detect_selection(monitor: Optional[int] = None, log_regions: bool = False) -
 
     if commander_match:
         commander, score = commander_match
-        prestige_raw = _ocr_image_to_text(images['prestige'])
+        prestige, prestige_raw = _ocr_prestige(images['prestige'], commander)
         raw_texts['prestige'] = prestige_raw
-        prestige = _match_prestige(commander, prestige_raw)
     else:
         # Commander-name region failed to read. Fall back to inferring the
         # commander from the prestige title, which is unique per commander.
-        prestige_raw = _ocr_image_to_text(images['prestige'])
+        fallback, prestige_raw = _ocr_prestige(images['prestige'])
         raw_texts['prestige'] = prestige_raw
-        fallback = _commander_from_prestige(prestige_raw)
         if not fallback:
             log_raw()
             return None
@@ -301,9 +347,8 @@ def detect_selection(monitor: Optional[int] = None, log_regions: bool = False) -
                 f"{commander_display_name(commander)} from prestige '{prestige['title']}'"
             )
 
-    difficulty_raw = _ocr_image_to_text(images['difficulty'])
+    difficulty, difficulty_raw = _ocr_difficulty(images['difficulty'])
     raw_texts['difficulty'] = difficulty_raw
-    difficulty = _match_difficulty(difficulty_raw)
     log_raw()
 
     return {
@@ -338,6 +383,16 @@ class _SelectionState:
     def clear(self) -> None:
         with self._lock:
             self._data = None
+
+    def clear_if_unchanged(self, observed: Optional[Dict[str, Any]]) -> bool:
+        """Clear only when no newer OCR result replaced the observed value."""
+        observed_time = observed.get('time') if observed else None
+        with self._lock:
+            current_time = self._data.get('time') if self._data else None
+            if current_time != observed_time:
+                return False
+            self._data = None
+            return True
 
 
 SELECTION = _SelectionState()

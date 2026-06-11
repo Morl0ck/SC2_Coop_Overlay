@@ -47,6 +47,7 @@ class BuildOrderTracker:
         self.current_commander = None
         self.commander_source = None
         self.display_cutoff = None
+        self.last_seen_display_time = None
         self.stall.reset()
 
     def _build_order_settings(self) -> Dict[str, Any]:
@@ -138,6 +139,7 @@ class BuildOrderTracker:
             if not self.in_game and ingame:
                 self.done = True
                 self.idle = True
+                self.last_seen_display_time = display_time
                 return
 
         # Back in menus / replay / versus -> reset, ready for the next game.
@@ -148,12 +150,26 @@ class BuildOrderTracker:
             self.done = False
             self.emitted = False
             self.idle = True
+            self.last_seen_display_time = None
             return
 
         self.idle = False
+        previous_display_time = self.last_seen_display_time
+        self.last_seen_display_time = display_time
 
-        # Build order already shown for this game; wait until SC2 leaves the game.
+        # SC2 can transition directly from one game's stale score-screen state
+        # to the next game without exposing a menu poll. The new game clock
+        # resetting near zero is then the only lifecycle boundary we receive.
         if self.done:
+            if previous_display_time is not None and display_time < previous_display_time:
+                logger.info(
+                    f'Game clock reset ({previous_display_time} -> {display_time}) '
+                    '-> next game'
+                )
+                self.done = False
+                self.emitted = False
+                self.in_game = False
+                self._start(display_time)
             return
 
         if not self.in_game:

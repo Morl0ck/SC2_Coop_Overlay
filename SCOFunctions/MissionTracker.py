@@ -54,6 +54,7 @@ class MissionTracker:
         self.current_timing_difficulty = None
         self.selection_difficulty = None
         self.pending_game = False
+        self.pending_selection = None
         self.last_sent_display_time = None
         self.last_sync_wallclock = 0.0
         self.stall.reset()
@@ -197,7 +198,9 @@ class MissionTracker:
         if not self.in_game:
             self.idle = True
             if is_ingame(players, is_replay, display_time):
-                self.pending_game = True
+                if not self.pending_game:
+                    self.pending_game = True
+                    self.pending_selection = SELECTION.get(max_age=None)
                 # Don't restart on the frozen score screen we just ended on
                 # (or the one in progress when the app started).
                 if self._suppress_restart and display_time == self._suppressed_display_time:
@@ -207,8 +210,12 @@ class MissionTracker:
                 self._start(players, display_time, resp)
             else:
                 if self.pending_game:
-                    SELECTION.clear()
+                    # A click-triggered OCR result may arrive while /game still
+                    # exposes the previous score screen. Preserve that newer
+                    # lobby selection across the subsequent menu/loading state.
+                    SELECTION.clear_if_unchanged(self.pending_selection)
                     self.pending_game = False
+                    self.pending_selection = None
                 # Back in menus / replay / versus -> clear the score-screen guard.
                 self._suppress_restart = False
                 self._suppressed_display_time = None
