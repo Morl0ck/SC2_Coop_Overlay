@@ -1021,8 +1021,8 @@ class UI_TabWidget(object):
         player_names = (', ').join(self.CAnalysis.main_names)
         self.TAB_Stats.LA_IdentifiedPlayers.setText(f"Main players: {player_names}")
         self.TAB_Stats.LA_GamesFound.setText(f"Games found: {len(self.CAnalysis.ReplayData)}")
-        self.TAB_Stats.LA_Stats_Wait.deleteLater()
-        self.TAB_Games.LA_Games_Wait.deleteLater()
+        self.TAB_Stats.clear_wait_message()
+        self.TAB_Games.clear_wait_message()
         self.TAB_Stats.generate_stats()
         self.TAB_Mutations.update_data(self.CAnalysis.get_weekly_data())
 

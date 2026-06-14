@@ -117,6 +117,13 @@ class GameTab(QtWidgets.QWidget):
         self.SC_GamesScrollArea.setGeometry(
             QtCore.QRect(0, self.HEADING_HEIGHT, max(self.width() - 5, 0), max(self.height() - self.HEADING_HEIGHT, 0)))
 
+    def clear_wait_message(self):
+        """Remove the analysis placeholder and release its Python reference."""
+        if self.LA_Games_Wait is None:
+            return
+        self.LA_Games_Wait.deleteLater()
+        self.LA_Games_Wait = None
+
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self.update_scroll_layout()

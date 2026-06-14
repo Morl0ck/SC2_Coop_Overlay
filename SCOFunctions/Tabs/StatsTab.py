@@ -369,6 +369,13 @@ class StatsTab(QtWidgets.QWidget):
                 footnote_w,
                 20)
 
+    def clear_wait_message(self):
+        """Remove the analysis placeholder without leaving a stale Qt wrapper."""
+        if self.LA_Stats_Wait is None:
+            return
+        self.LA_Stats_Wait.deleteLater()
+        self.LA_Stats_Wait = None
+
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self.update_results_layout()
