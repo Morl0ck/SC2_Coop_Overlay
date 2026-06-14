@@ -9,8 +9,9 @@ shared game-state poller and emits:
 
 The commander is no longer OCR-ed in-game. It is read from the co-op lobby
 selection screen by `CommanderSelection` (click-triggered OCR) before the game
-starts and cached in ``SELECTION``; we fall back to the configured default
-commander when nothing was detected.
+starts and cached in ``SELECTION``. If rapid re-queueing leaves no time for a
+fresh reading, we reuse the last successfully detected commander before falling
+back to the configured default.
 """
 from __future__ import annotations
 
@@ -33,6 +34,10 @@ class BuildOrderTracker:
         self._send_event = send_event
         # One-shot startup baseline: only set once, never in reset().
         self._startup_seen = False
+        # Survives per-game resets. A rapid second game can begin before the
+        # click debounce/OCR finishes, in which case the last confirmed reading
+        # is a better fallback than the configured default.
+        self.last_detected_commander = None
         self.stall = StallDetector(self.STALL_LIMIT)
         self.reset()
 
@@ -60,12 +65,15 @@ class BuildOrderTracker:
             return 5.0
 
     def _resolve_commander(self) -> tuple:
-        """Pick the commander for this game: detected selection, else default."""
+        """Pick the commander: fresh detection, prior detection, then default."""
         cfg = self._build_order_settings()
         if cfg.get('ocr_enabled', True):
             selection = SELECTION.get()
             if selection and selection.get('commander'):
-                return selection['commander'], 'selection OCR'
+                self.last_detected_commander = selection['commander']
+                return self.last_detected_commander, 'selection OCR'
+            if self.last_detected_commander:
+                return self.last_detected_commander, 'previous selection OCR'
         default = cfg.get('default_commander', 'Raynor')
         if default:
             return default, 'default'

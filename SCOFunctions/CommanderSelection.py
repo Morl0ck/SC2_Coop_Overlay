@@ -227,22 +227,37 @@ def _match_difficulty(text: str) -> Optional[str]:
     raw = (text or '').lower()
     if 'brutal' in raw or 'b+' in raw.replace(' ', ''):
         return 'Brutal'
-    # The difficulty crop also includes the bonus line. On Brutal, that line is
-    # consistently easier for Tesseract to read than the selected button.
+    # The difficulty crop also includes the bonus line, which is often clearer
+    # than the short selected-button label. Accept common OCR substitutions for
+    # the percentage digits/letters.
     if re.search(r'\bbonus\s*xp\W*100\s*%?', raw):
         return 'Brutal'
+    if re.search(r'\bbonus\s*xp\W*(?:50|5o|so)\s*%?', raw):
+        return 'Hard'
+
     norm = _normalize_text(text)
     if not norm:
         return None
     for name in ('casual', 'normal', 'hard'):
         if name in norm:
             return name.capitalize()
+
+    # Score individual OCR tokens rather than the entire two-line crop. A read
+    # such as "HARO BONUS XP 50%" is a strong Hard match even though comparing
+    # "hard" against the complete normalized block scores poorly.
+    probes = []
+    for token in norm.split():
+        cleaned = token.translate(str.maketrans({'4': 'a', '0': 'o'}))
+        if 3 <= len(cleaned) <= 8:
+            probes.append(cleaned)
+
     best, best_score = None, 0.0
     for name in DIFFICULTIES:
-        score = difflib.SequenceMatcher(None, name.lower(), norm).ratio()
-        if score > best_score:
-            best, best_score = name, score
-    return best if best_score >= 0.7 else None
+        for probe in probes:
+            score = difflib.SequenceMatcher(None, name.lower(), probe).ratio()
+            if score > best_score:
+                best, best_score = name, score
+    return best if best_score >= 0.72 else None
 
 
 def _ocr_difficulty(image) -> Tuple[Optional[str], str]:

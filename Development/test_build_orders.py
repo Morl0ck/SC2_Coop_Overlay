@@ -142,6 +142,46 @@ def test_tracker_starts_next_game_when_clock_resets_without_menu_poll() -> None:
         SM.settings = original_settings
 
 
+def test_tracker_reuses_last_detection_when_rapid_requeue_has_no_fresh_ocr() -> None:
+    original_settings = copy.deepcopy(SM.settings)
+    events = []
+    try:
+        SM.settings['build_orders'] = {
+            'default_commander': 'Stetmann',
+            'display_minutes': 5,
+            'ocr_enabled': True,
+            'use_custom': {},
+            'custom': {},
+        }
+        game = {
+            'players': [
+                {'id': 1, 'type': 'user'},
+                {'id': 2, 'type': 'user'},
+                {'id': 3, 'type': 'computer'},
+            ],
+            'isReplay': False,
+            'displayTime': 2,
+        }
+
+        tracker = BuildOrderTracker(send_event=events.append)
+        tracker._startup_seen = True
+        SELECTION.update({'commander': 'Mengsk'})
+        tracker.update(game)
+
+        # End the first game's display and enter another game without a menu
+        # poll or a new click-triggered OCR result.
+        tracker.update(dict(game, displayTime=301))
+        assert tracker.done
+        tracker.update(dict(game, displayTime=4))
+
+        starts = [event for event in events if event.get('buildOrderStartEvent')]
+        assert [event['commander'] for event in starts] == ['Mengsk', 'Mengsk']
+        assert tracker.commander_source == 'previous selection OCR'
+    finally:
+        SELECTION.clear()
+        SM.settings = original_settings
+
+
 def test_ocr_fuzzy_match() -> None:
     text = _normalize_text('Commander: Stetmann  Ally: Raynor')
     match = _match_in_text(text, list(build_orders_defaults.keys()))
@@ -184,6 +224,10 @@ def test_difficulty_match_from_noisy_ocr() -> None:
     assert _match_difficulty('peal) nel\nBONUS XP 100%') == 'Brutal'
     assert _match_difficulty('BONUS XP. 100%') == 'Brutal'
     assert _match_difficulty('HARD\nBONUS XP 50%') == 'Hard'
+    assert _match_difficulty('BONUS XP. 50%') == 'Hard'
+    assert _match_difficulty('BONUS XP. SO%') == 'Hard'
+    assert _match_difficulty('| H4RD |') == 'Hard'
+    assert _match_difficulty('| HARO |') == 'Hard'
 
 
 def test_difficulty_ocr_uses_multiline_then_focused_retry() -> None:
@@ -196,7 +240,7 @@ def test_difficulty_ocr_uses_multiline_then_focused_retry() -> None:
 
     original_ocr = CommanderSelection._ocr_image_to_text
     calls = []
-    responses = iter(['BONUS XP 50%', '| BRUTAL |'])
+    responses = iter(['BONUS XP', '| BRUTAL |'])
     try:
         def fake_ocr(image, psm=7):
             calls.append(psm)
@@ -206,6 +250,31 @@ def test_difficulty_ocr_uses_multiline_then_focused_retry() -> None:
         difficulty, raw = _ocr_difficulty(FakeImage())
         assert difficulty == 'Brutal'
         assert 'BRUTAL' in raw
+        assert calls == [6, 7]
+    finally:
+        CommanderSelection._ocr_image_to_text = original_ocr
+
+
+def test_difficulty_ocr_recovers_noisy_hard_from_focused_retry() -> None:
+    class FakeImage:
+        size = (200, 100)
+
+        def crop(self, box):
+            assert box == (0, 0, 200, 62)
+            return self
+
+    original_ocr = CommanderSelection._ocr_image_to_text
+    calls = []
+    responses = iter(['unreadable', '| H4RD |'])
+    try:
+        def fake_ocr(image, psm=7):
+            calls.append(psm)
+            return next(responses)
+
+        CommanderSelection._ocr_image_to_text = fake_ocr
+        difficulty, raw = _ocr_difficulty(FakeImage())
+        assert difficulty == 'Hard'
+        assert 'H4RD' in raw
         assert calls == [6, 7]
     finally:
         CommanderSelection._ocr_image_to_text = original_ocr
@@ -350,11 +419,13 @@ if __name__ == '__main__':
     test_tracker_display_cutoff()
     test_tracker_retries_when_no_steps()
     test_tracker_starts_next_game_when_clock_resets_without_menu_poll()
+    test_tracker_reuses_last_detection_when_rapid_requeue_has_no_fresh_ocr()
     test_ocr_fuzzy_match()
     test_prestige_match_ignores_surrounding_ocr_noise()
     test_prestige_ocr_uses_block_mode_then_single_line_retry()
     test_difficulty_match_from_noisy_ocr()
     test_difficulty_ocr_uses_multiline_then_focused_retry()
+    test_difficulty_ocr_recovers_noisy_hard_from_focused_retry()
     test_selection_cache_expires()
     test_build_tracker_consumes_selection()
     test_mission_difficulty_snapshot_survives_cache_clear()
